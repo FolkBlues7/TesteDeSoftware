@@ -29,6 +29,7 @@ public class MainApp extends Application {
 
 		// Cria novo mapa aleatório
 		this.mapa = new Mapa(15, 15);
+		this.mapa.gerarCenarioAleatorio(3);
 		this.gameView = new GameView(mapa);
 
 		// BorderPane ajuda a organizar se quisermos adicionar placar depois
@@ -61,7 +62,7 @@ public class MainApp extends Application {
 			}
 
 			// Lógica validada
-			if (mapa.podeMover(novoX, novoY, false)) {
+			if (mapa.podeMover(novoX, novoY)) {
 				xAtual = novoX;
 				yAtual = novoY;
 				mapa.adicionarMovimento(xAtual, yAtual);

@@ -1,10 +1,12 @@
 package entities;
 
+import common.JavaRandomGenerator;
+import common.RandomGenerator;
+
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import java.util.Random;
 
 public class Mapa {
 	private final int colunas;
@@ -12,90 +14,105 @@ public class Mapa {
 	private final List<Ponto> trajeto;
 	private boolean[][] obstaculos;
 	private List<Ponto> moedas;
+
 	private int moedasColetadas;
-	private final Random random;
+	private RandomGenerator random;
 
-	// Construtor Padrão (Usa geração aleatória com garantia de caminho)
-	public Mapa(int colunas, int linhas) {
-		this.colunas = colunas;
-		this.linhas = linhas;
-		this.trajeto = new ArrayList<>();
+	public Mapa(int linhas, int colunas) {
+		this.colunas = linhas;
+		this.linhas = colunas;
+		this.obstaculos = new boolean[linhas][colunas];
 		this.moedas = new ArrayList<>();
-		this.random = new Random();
-		this.moedasColetadas = 0;
-
-		this.trajeto.add(new Ponto(0, 0));
-		gerarCenarioAleatorio();
-	}
-
-	/**
-	 * CONSTRUTOR DE TESTE: Essencial para Rastreabilidade e Testes Sistemáticos.
-	 * Permite injetar um cenário fixo para validar bordas e MC/DC.
-	 */
-	public Mapa(int colunas, int linhas, boolean[][] obstaculosPredefinidos, List<Ponto> moedasPredefinidas) {
-		this.colunas = colunas;
-		this.linhas = linhas;
-		this.obstaculos = obstaculosPredefinidos;
-		this.moedas = new ArrayList<>(moedasPredefinidas);
 		this.trajeto = new ArrayList<>();
 		this.trajeto.add(new Ponto(0, 0));
-		this.random = new Random();
+		this.random = new JavaRandomGenerator();
 		this.moedasColetadas = 0;
 	}
 
-	private void gerarCenarioAleatorio() {
-		boolean mapaValido = false;
-		while (!mapaValido) {
-			tentarGerarCenario();
-			mapaValido = verificarAcessibilidade();
+	public void setRandom(RandomGenerator random) {
+		this.random = random;
+	}
+
+	public void gerarCenarioPredefinido(boolean[][] obstaculos, List<Ponto> moedas) {
+		this.obstaculos = obstaculos;
+		this.moedas = moedas;
+	}
+
+	public void gerarCenarioAleatorio(int qtdMoedas) {
+		do {
+			moedas = gerarMoedasAleatorias(qtdMoedas);
+			obstaculos = gerarObstaculosAleatorios();
+		} while (!verificarAcessibilidade(moedas, obstaculos));
+	}
+
+	public boolean podeMover(int x, int y) {
+		boolean dentro = (x >= 0 && x < colunas) && (y >= 0 && y < linhas);
+		if (!dentro) {
+			return false;
+		}
+
+        return !obstaculos[x][y];
+	}
+
+	public void adicionarMovimento(int x, int y) {
+		Ponto novoPonto = new Ponto(x, y);
+
+		if (isObstaculo(x, y)) return;
+
+		trajeto.add(novoPonto);
+
+		if (moedas.contains(novoPonto)) {
+			moedas.remove(novoPonto);
+			moedasColetadas++;
 		}
 	}
 
-	private void tentarGerarCenario() {
-		this.obstaculos = new boolean[colunas][linhas];
-		this.moedas.clear();
-		this.moedasColetadas = 0;
+	public boolean faseConcluida() {
+		return moedas.isEmpty();
+	}
 
-		// 1. Gera Obstáculos (aprox. 20% do mapa)
+	private List<Ponto> gerarMoedasAleatorias(int qtdMoedas) {
+		List<Ponto> moedas = new ArrayList<>();
+		for (int i = 0; i < qtdMoedas; i++) {
+			int x;
+			int y;
+
+			do {
+				x = random.nextInt(colunas);
+				y = random.nextInt(linhas);
+			} while (moedas.contains(new Ponto(x, y)));
+
+			moedas.add(new Ponto(x, y));
+		}
+		return moedas;
+	}
+
+	private boolean[][] gerarObstaculosAleatorios() {
+		boolean[][] obstaculos = new boolean[colunas][linhas];
 		for (int i = 0; i < colunas; i++) {
 			for (int j = 0; j < linhas; j++) {
-				if (i == 0 && j == 0) {
-					continue;
-				}
 				if (random.nextDouble() < 0.20) {
 					obstaculos[i][j] = true;
 				}
 			}
 		}
-
-		// 2. Gera Moedas (1 a 3)
-		int qtdMoedas = random.nextInt(3) + 1;
-		while (moedas.size() < qtdMoedas) {
-			int x = random.nextInt(colunas);
-			int y = random.nextInt(linhas);
-			if (!obstaculos[x][y] && !(x == 0 && y == 0)) {
-				Ponto novaMoeda = new Ponto(x, y);
-				if (!moedas.contains(novaMoeda)) {
-					moedas.add(novaMoeda);
-				}
-			}
-		}
+		return obstaculos;
 	}
 
 	/**
 	 * Valida se todas as moedas são alcançáveis a partir da origem (0,0). Utiliza
 	 * Algoritmo de Busca em Largura (BFS).
 	 */
-	private boolean verificarAcessibilidade() {
+	private boolean verificarAcessibilidade(List<Ponto> moedas, boolean[][] obstaculos) {
 		for (Ponto moeda : moedas) {
-			if (!existeCaminho(new Ponto(0, 0), moeda)) {
+			if (!existeCaminho(new Ponto(0, 0), moeda, obstaculos)) {
 				return false;
 			}
 		}
 		return true;
 	}
 
-	private boolean existeCaminho(Ponto origem, Ponto destino) {
+	private boolean existeCaminho(Ponto origem, Ponto destino, boolean[][]obstaculos) {
 		boolean[][] visitado = new boolean[colunas][linhas];
 		Queue<Ponto> fila = new LinkedList<>();
 
@@ -122,30 +139,6 @@ public class Mapa {
 		return false;
 	}
 
-	public boolean podeMover(int x, int y, boolean temItemQuebraObstaculo) {
-		boolean dentro = (x >= 0 && x < colunas) && (y >= 0 && y < linhas);
-		if (!dentro) {
-			return false;
-		}
-
-		boolean livre = !obstaculos[x][y] || temItemQuebraObstaculo;
-		return livre;
-	}
-
-	public void adicionarMovimento(int x, int y) {
-		Ponto novoPonto = new Ponto(x, y);
-		trajeto.add(novoPonto);
-
-		if (moedas.contains(novoPonto)) {
-			moedas.remove(novoPonto);
-			moedasColetadas++;
-		}
-	}
-
-	public boolean faseConcluida() {
-		return moedas.isEmpty();
-	}
-
 	// Getters
 	public List<Ponto> getTrajeto() {
 		return trajeto;
@@ -165,5 +158,9 @@ public class Mapa {
 
 	public List<Ponto> getMoedas() {
 		return new ArrayList<>(moedas);
+	}
+
+	public int getMoedasColetadas() {
+		return moedasColetadas;
 	}
 }
