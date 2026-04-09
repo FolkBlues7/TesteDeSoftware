@@ -39,6 +39,14 @@ public class Mapa {
 	}
 
 	public void gerarCenarioAleatorio(int qtdMoedas) {
+		if (qtdMoedas <= 0){
+			throw new IllegalArgumentException("O valor de moedas não pode ser menor ou igual a 0!");
+		}
+
+		if (qtdMoedas > colunas * linhas) {
+			throw new IllegalArgumentException("O valor de moedas não pode ser maior que a quantidade de espaços no tabuleiro!");
+		}
+
 		do {
 			moedas = gerarMoedasAleatorias(qtdMoedas);
 			obstaculos = gerarObstaculosAleatorios();
@@ -56,6 +64,7 @@ public class Mapa {
 
 	public void adicionarMovimento(int x, int y) {
 		Ponto novoPonto = new Ponto(x, y);
+
 
 		if (isObstaculo(x, y)) return;
 
@@ -103,7 +112,7 @@ public class Mapa {
 	 * Valida se todas as moedas são alcançáveis a partir da origem (0,0). Utiliza
 	 * Algoritmo de Busca em Largura (BFS).
 	 */
-	private boolean verificarAcessibilidade(List<Ponto> moedas, boolean[][] obstaculos) {
+    boolean verificarAcessibilidade(List<Ponto> moedas, boolean[][] obstaculos) {
 		for (Ponto moeda : moedas) {
 			if (!existeCaminho(new Ponto(0, 0), moeda, obstaculos)) {
 				return false;
@@ -162,5 +171,10 @@ public class Mapa {
 
 	public int getMoedasColetadas() {
 		return moedasColetadas;
+	}
+
+
+	public boolean[][] getObstaculos() {
+		return  obstaculos;
 	}
 }
