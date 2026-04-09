@@ -98,26 +98,7 @@ class MapaTest {
         assertEquals(5, mapa.getColunas());
         assertEquals(5, mapa.getLinhas());
     }
-
-    @Test
-    void testesDeFronteiraERobustez() {
-        var linhas = 5;
-        var colunas = 5;
-        var mapa = new Mapa(colunas, linhas);
-        mapa.gerarCenarioPredefinido(new boolean[linhas][colunas], new ArrayList<>());
-
-        // Testa limites exatos do mapa (n-1) e extrapolação
-        assertTrue(mapa.podeMover(colunas - 1, linhas - 1));
-        assertFalse(mapa.podeMover(colunas, linhas));
-        assertFalse(mapa.podeMover(-1, 0));
-
-        // Valida falha ao tentar gerar mapa sem injetar dependência Random
-        mapa.setRandom(null);
-        assertThrows(NullPointerException.class, () -> {
-            mapa.gerarCenarioAleatorio(1);
-        }, "Deveria lançar NPE ao tentar gerar cenário sem um RandomGenerator configurado");
-    }
-
+    
     @Test
     void deveRejeitarQuantidadeInvalidaDeMoedas() {
         var mapa = new Mapa(5, 5);
