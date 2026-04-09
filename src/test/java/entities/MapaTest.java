@@ -98,7 +98,7 @@ class MapaTest {
         assertEquals(5, mapa.getColunas());
         assertEquals(5, mapa.getLinhas());
     }
-    
+
     @Test
     void deveRejeitarQuantidadeInvalidaDeMoedas() {
         var mapa = new Mapa(5, 5);
@@ -197,6 +197,28 @@ class MapaTest {
 
         assertTrue(mapa.verificarAcessibilidade(mapa.getMoedas(), mapa.getObstaculos()),
                 "O BFS deveria retornar true para um caminho tortuoso, mas possível");
+    }
+
+    @Test
+    void testesDeRobustezExtrema() {
+        var mapa = new Mapa(5, 5);
+        mapa.gerarCenarioPredefinido(new boolean[5][5], new ArrayList<>());
+
+        // --- TESTE DE NULL ---
+        // Verifica se o sistema trata a falta de um gerador de números aleatórios
+        mapa.setRandom(null);
+        assertThrows(NullPointerException.class, () -> {
+            mapa.gerarCenarioAleatorio(1);
+        }, "Deveria lançar NPE ao tentar gerar cenário sem um RandomGenerator configurado");
+
+        // --- TESTE DE MAX_VALUE (Overflow e Fronteira) ---
+        // Garante que valores extremos de inteiros sejam barrados corretamente
+        assertFalse(mapa.podeMover(Integer.MAX_VALUE, 0), "Coordenada X máxima deve ser inválida");
+        assertFalse(mapa.podeMover(0, Integer.MAX_VALUE), "Coordenada Y máxima deve ser inválida");
+        assertFalse(mapa.podeMover(Integer.MAX_VALUE, Integer.MAX_VALUE), "Coordenadas máximas devem ser inválidas");
+
+        // Teste de valores negativos extremos
+        assertFalse(mapa.podeMover(Integer.MIN_VALUE, 0), "Valores negativos extremos devem ser inválidos");
     }
 
 
