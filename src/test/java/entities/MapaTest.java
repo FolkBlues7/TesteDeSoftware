@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class MapaTest {
 
+    //Teste de fronteira: Testando as bordas do mapa
     @Test
     void podeMover() {
         var linhas = 5;
@@ -30,6 +31,7 @@ class MapaTest {
         assertFalse(mapa.podeMover(colunas + 1, 0));
     }
 
+    //Teste de domínio: Testando o fluxo do progresso e vitória
     @Test
     void adicionarMovimento() {
         var linhas = 5;
@@ -53,6 +55,7 @@ class MapaTest {
         assertTrue(mapa.faseConcluida());
     }
 
+    //Teste estrutural: Controle do fluxo da aplicação utilizando mocks
     @Test
     void gerarCenarioAleatorio() {
         var mapa = new Mapa(5, 5);
@@ -99,6 +102,7 @@ class MapaTest {
         assertEquals(5, mapa.getLinhas());
     }
 
+    //Teste de fronteira: Testando valores máximos e mínimos para as moedas
     @Test
     void deveRejeitarQuantidadeInvalidaDeMoedas() {
         var mapa = new Mapa(5, 5);
@@ -115,7 +119,7 @@ class MapaTest {
                 "Não deve permitir gerar mais de 3 moedas conforme REQ-01");
     }
 
-    //Se passarmos mais de uma vez onde antes havia uma única moeda, nada deve ser adicionado.
+    //Teste de domínio: Testando a idempotencia da coleta de moedas
     @Test
     void deveGarantirIdempotenciaNaColetaDeMoedas() {
         var mapa = new Mapa(5, 5);
@@ -136,6 +140,7 @@ class MapaTest {
         assertEquals(1, mapa.getMoedasColetadas(), "Não deve coletar a mesma moeda mais de uma vez (Idempotência)");
     }
 
+    //Teste de domínio: Regra de não duplicidade de moedas
     @Test
     void deveRegistrarTrajetoMesmoAoVisitarMesmaCasa() {
         var mapa = new Mapa(5, 5);
@@ -149,6 +154,7 @@ class MapaTest {
         assertEquals(3, mapa.getTrajeto().size(), "O trajeto deve crescer a cada movimento realizado pelo jogador");
     }
 
+    //Teste de domínio: Testando a contagem de passos caso tente mover-se para obstáculo
     @Test
     void naoDeveAdicionarMovimentoSeHouverObstaculo() {
         var linhas = 5;
@@ -168,6 +174,7 @@ class MapaTest {
         assertTrue(mapa.getTrajeto().size() == 1  , "O trajeto não deve registrar movimentos para células com obstáculos");
     }
 
+    //Teste estrutural: Testando a lógica interna do algoritmo de busca BFS
     @Test
     void deveValidarAcessibilidadeComBFS() {
         var mapa = new Mapa(3, 3);
@@ -199,6 +206,7 @@ class MapaTest {
                 "O BFS deveria retornar true para um caminho tortuoso, mas possível");
     }
 
+    //Teste de fronteira: Testando o limite técnico de memória e tipos
     @Test
     void testesDeRobustezExtrema() {
         var mapa = new Mapa(5, 5);
