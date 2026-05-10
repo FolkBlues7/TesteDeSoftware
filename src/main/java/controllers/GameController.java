@@ -5,25 +5,29 @@ import models.Ponto;
 import models.SessaoJogo;
 import models.Usuario;
 import views.GameView;
+import views.HUDView;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
 public class GameController {
+    private HUDView hud;
     private Usuario usuario;
     private SessaoJogo sessao;
     private Mapa mapa;
     private GameView gameView;
     private Stage stage;
+    private Runnable onVoltarMenu; // Ação para voltar e salvar
     private int xAtual = 0;
     private int yAtual = 0;
 
-    // ATUALIZADO: Agora o construtor recebe o usuário logado
-    public GameController(Stage stage, Usuario usuario) {
+    // Recebe a ação de voltar
+    public GameController(Stage stage, Usuario usuario, Runnable onVoltarMenu) {
         this.stage = stage;
         this.usuario = usuario;
-        this.sessao = new SessaoJogo(); // Inicia a sessão no nível 1
+        this.onVoltarMenu = onVoltarMenu;
+        this.sessao = new SessaoJogo();
     }
 
     public void iniciarJogo() {
@@ -49,13 +53,22 @@ public class GameController {
         }
 
         this.gameView = new GameView(mapa);
+        this.hud = new HUDView();
+        this.hud.atualizar(usuario, sessao);
+
+        // NOVO: Vincula o clique do botão "Sair pro Menu" à ação de voltar (salvando o jogo)
+        this.hud.getBtnSair().setOnAction(e -> onVoltarMenu.run());
+
         BorderPane root = new BorderPane();
         root.setCenter(gameView);
+        root.setTop(hud);
 
         Scene scene = new Scene(root);
         scene.setOnKeyPressed(this::tratarTeclado);
 
         stage.setScene(scene);
+        stage.sizeToScene();
+
         gameView.render();
     }
 
@@ -69,11 +82,11 @@ public class GameController {
             case LEFT -> novoX--;
             case RIGHT -> novoX++;
             case R -> { carregarNivel(); return; }
+            case ESCAPE -> { onVoltarMenu.run(); return; } // Tecla ESC salva e volta ao menu!
         }
 
         if (mapa.podeMover(novoX, novoY)) {
 
-            // 1. Regra do Alçapão
             if (mapa.isAlcapao(novoX, novoY)) {
                 if (sessao.isTemItemEspecial()) {
                     System.out.println("Cristal utilizado!");
@@ -86,21 +99,17 @@ public class GameController {
                 return;
             }
 
-            // 2. Coleta de Moedas (Pontuação Local do Usuário)
             Ponto futuraPosicao = new Ponto(novoX, novoY);
             if (mapa.getMoedas().contains(futuraPosicao)) {
-                // Remove a moeda do mapa e soma pontos ao usuário
                 mapa.coletarMoeda(futuraPosicao);
                 usuario.adicionarPontos(10);
                 System.out.println("Moeda coletada! Total de " + usuario.getNome() + ": " + usuario.getPontuacaoTotal());
             }
 
-            // 3. Atualiza posição e rastro
             xAtual = novoX;
             yAtual = novoY;
             mapa.adicionarMovimento(xAtual, yAtual);
 
-            // 4. Regra do Item Especial
             if (mapa.isItemEspecial(xAtual, yAtual)) {
                 System.out.println("Cristal coletado!");
                 sessao.setTemItemEspecial(true);
@@ -108,6 +117,7 @@ public class GameController {
             }
 
             gameView.render();
+            hud.atualizar(usuario, sessao);
         }
     }
 }

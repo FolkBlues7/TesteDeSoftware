@@ -1,0 +1,2 @@
+admin;123;150;7;true
+vinicius;123;0;2;false

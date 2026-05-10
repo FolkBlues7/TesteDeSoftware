@@ -1,15 +1,16 @@
 package views;
 
 import javafx.geometry.Pos;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 
 public class LoginView extends VBox {
     private TextField campoNome;
-    private Button botaoEntrar;
+    private PasswordField campoSenha;
+    private Button botaoEntrar, botaoCadastrar, botaoExcluir, botaoRanking;
+    private Label mensagemAviso;
 
     public LoginView() {
         this.setSpacing(15);
@@ -21,17 +22,35 @@ public class LoginView extends VBox {
         titulo.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
 
         campoNome = new TextField();
-        campoNome.setPromptText("Digite seu nome de usuário...");
+        campoNome.setPromptText("Login...");
         campoNome.setMaxWidth(250);
-        campoNome.setStyle("-fx-font-size: 14;");
 
-        botaoEntrar = new Button("Iniciar Aventura");
-        botaoEntrar.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 16;");
-        botaoEntrar.setCursor(javafx.scene.Cursor.HAND);
+        campoSenha = new PasswordField();
+        campoSenha.setPromptText("Senha...");
+        campoSenha.setMaxWidth(250);
 
-        this.getChildren().addAll(titulo, campoNome, botaoEntrar);
+        botaoEntrar = new Button("Entrar");
+        botaoCadastrar = new Button("Cadastrar");
+        botaoExcluir = new Button("Excluir Usuário");
+        botaoRanking = new Button("🏆 Ranking");
+
+        HBox caixaAcao = new HBox(10, botaoEntrar, botaoCadastrar);
+        caixaAcao.setAlignment(Pos.CENTER);
+
+        HBox caixaExtra = new HBox(10, botaoRanking, botaoExcluir);
+        caixaExtra.setAlignment(Pos.CENTER);
+
+        mensagemAviso = new Label();
+        mensagemAviso.setStyle("-fx-text-fill: #f1c40f;");
+
+        this.getChildren().addAll(titulo, campoNome, campoSenha, caixaAcao, caixaExtra, mensagemAviso);
     }
 
     public String getNomeDigitado() { return campoNome.getText(); }
+    public String getSenhaDigitada() { return campoSenha.getText(); }
     public Button getBotaoEntrar() { return botaoEntrar; }
+    public Button getBotaoCadastrar() { return botaoCadastrar; }
+    public Button getBotaoExcluir() { return botaoExcluir; }
+    public Button getBotaoRanking() { return botaoRanking; }
+    public void exibirMensagem(String texto) { mensagemAviso.setText(texto); }
 }
