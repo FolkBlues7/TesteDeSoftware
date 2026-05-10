@@ -14,6 +14,9 @@ public class Mapa {
 	private final List<Ponto> trajeto;
 	private boolean[][] obstaculos;
 	private List<Ponto> moedas;
+	private Ponto alcapao;
+	private Ponto itemEspecial;
+	private Ponto posicaoOriginalItemEspecial;
 
 	private int moedasColetadas;
 	private RandomGenerator random;
@@ -39,18 +42,37 @@ public class Mapa {
 	}
 
 	public void gerarCenarioAleatorio(int qtdMoedas) {
-		if (qtdMoedas <= 0){
-			throw new IllegalArgumentException("O valor de moedas não pode ser menor ou igual a 0!");
-		}
-
-		if (qtdMoedas > colunas * linhas) {
-			throw new IllegalArgumentException("O valor de moedas não pode ser maior que a quantidade de espaços no tabuleiro!");
+		if (qtdMoedas <= 0 || qtdMoedas > colunas * linhas - 2) {
+			throw new IllegalArgumentException("Quantidade de moedas inválida!");
 		}
 
 		do {
 			moedas = gerarMoedasAleatorias(qtdMoedas);
 			obstaculos = gerarObstaculosAleatorios();
-		} while (!verificarAcessibilidade(moedas, obstaculos));
+
+			// Gera o Item Especial e o Alçapão em locais vazios
+			itemEspecial = gerarPontoLivre();
+
+			// SALVA A POSIÇÃO ORIGINAL PARA O CRISTAL PODER RENASCER DEPOIS
+			posicaoOriginalItemEspecial = itemEspecial;
+
+			alcapao = gerarPontoLivre();
+
+		} while (!verificarAcessibilidade(moedas, obstaculos) ||
+				!existeCaminho(new Ponto(0,0), itemEspecial, obstaculos) ||
+				!existeCaminho(new Ponto(0,0), alcapao, obstaculos));
+	}
+
+	// Método auxiliar para achar um lugar vazio (sem moeda, obstáculo, ou posição inicial)
+	private Ponto gerarPontoLivre() {
+		int x, y;
+		Ponto p;
+		do {
+			x = random.nextInt(colunas);
+			y = random.nextInt(linhas);
+			p = new Ponto(x, y);
+		} while (moedas.contains(p) || obstaculos[x][y] || (x == 0 && y == 0) || p.equals(itemEspecial));
+		return p;
 	}
 
 	public boolean podeMover(int x, int y) {
@@ -100,6 +122,9 @@ public class Mapa {
 		boolean[][] obstaculos = new boolean[colunas][linhas];
 		for (int i = 0; i < colunas; i++) {
 			for (int j = 0; j < linhas; j++) {
+
+				if (i == 0 && j == 0) continue;
+
 				if (random.nextDouble() < 0.20) {
 					obstaculos[i][j] = true;
 				}
@@ -148,6 +173,12 @@ public class Mapa {
 		return false;
 	}
 
+	public void renascerItemEspecial() {
+		if (this.posicaoOriginalItemEspecial != null) {
+			this.itemEspecial = this.posicaoOriginalItemEspecial;
+		}
+	}
+
 	// Getters
 	public List<Ponto> getTrajeto() {
 		return trajeto;
@@ -176,5 +207,20 @@ public class Mapa {
 
 	public boolean[][] getObstaculos() {
 		return  obstaculos;
+	}
+
+	public Ponto getAlcapao() { return alcapao; }
+	public Ponto getItemEspecial() { return itemEspecial; }
+
+	public boolean isAlcapao(int x, int y) {
+		return alcapao != null && alcapao.x() == x && alcapao.y() == y;
+	}
+
+	public boolean isItemEspecial(int x, int y) {
+		return itemEspecial != null && itemEspecial.x() == x && itemEspecial.y() == y;
+	}
+
+	public void coletarItemEspecial() {
+		this.itemEspecial = null; // Remove do mapa quando coletado
 	}
 }

@@ -44,6 +44,23 @@ public class GameView extends StackPane {
 			gc.fillOval(moeda.x() * TAMANHO_CELULA + 10, moeda.y() * TAMANHO_CELULA + 10, 20, 20);
 		}
 
+		// 2.1 Desenha o Item Especial (Cristal - Losango ou quadrado roxo)
+		Ponto item = mapa.getItemEspecial();
+		if (item != null) {
+			gc.setFill(Color.web("#9b59b6")); // Roxo
+			// Desenhando um quadrado menor centralizado para representar o item
+			gc.fillRect(item.x() * TAMANHO_CELULA + 10, item.y() * TAMANHO_CELULA + 10, 20, 20);
+		}
+
+// 2.2 Desenha o Alçapão (Quadrado marrom escuro com borda)
+		Ponto alcapao = mapa.getAlcapao();
+		if (alcapao != null) {
+			gc.setFill(Color.web("#5c4033")); // Marrom
+			gc.fillRect(alcapao.x() * TAMANHO_CELULA + 5, alcapao.y() * TAMANHO_CELULA + 5, 30, 30);
+			gc.setStroke(Color.BLACK);
+			gc.strokeRect(alcapao.x() * TAMANHO_CELULA + 5, alcapao.y() * TAMANHO_CELULA + 5, 30, 30);
+		}
+
 		// 3. Desenha o Trajeto
 		gc.setStroke(Color.web("#3498db"));
 		gc.setLineWidth(3);
@@ -57,8 +74,10 @@ public class GameView extends StackPane {
 		}
 
 		// 4. Desenha o Jogador
-		Ponto atual = pontos.get(pontos.size() - 1);
-		gc.setFill(Color.web("#e74c3c"));
-		gc.fillOval(atual.x() * TAMANHO_CELULA + 5, atual.y() * TAMANHO_CELULA + 5, 30, 30);
+		if (!pontos.isEmpty()) { // NOVO: Proteção contra lista vazia
+			Ponto atual = pontos.get(pontos.size() - 1);
+			gc.setFill(Color.web("#e74c3c"));
+			gc.fillOval(atual.x() * TAMANHO_CELULA + 5, atual.y() * TAMANHO_CELULA + 5, 30, 30);
+		}
 	}
 }
