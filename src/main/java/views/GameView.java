@@ -1,7 +1,7 @@
-package graphics;
+package views;
 
-import entities.Mapa;
-import entities.Ponto;
+import models.Mapa;
+import models.Ponto;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.layout.StackPane;

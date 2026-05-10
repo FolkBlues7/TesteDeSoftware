@@ -1,4 +1,4 @@
-package entities;
+package models;
 
 import common.JavaRandomGenerator;
 import common.RandomGenerator;

@@ -1,8 +1,7 @@
-package entities;
+package models;
 
 import common.RandomGenerator;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.engine.support.descriptor.FileSystemSource;
 
 import java.util.ArrayList;
 import java.util.List;
