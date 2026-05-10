@@ -1,7 +1,9 @@
 package controllers;
 
 import models.Mapa;
+import models.Ponto;
 import models.SessaoJogo;
+import models.Usuario;
 import views.GameView;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyEvent;
@@ -9,6 +11,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
 public class GameController {
+    private Usuario usuario;
     private SessaoJogo sessao;
     private Mapa mapa;
     private GameView gameView;
@@ -16,8 +19,10 @@ public class GameController {
     private int xAtual = 0;
     private int yAtual = 0;
 
-    public GameController(Stage stage) {
+    // ATUALIZADO: Agora o construtor recebe o usuário logado
+    public GameController(Stage stage, Usuario usuario) {
         this.stage = stage;
+        this.usuario = usuario;
         this.sessao = new SessaoJogo(); // Inicia a sessão no nível 1
     }
 
@@ -26,34 +31,23 @@ public class GameController {
     }
 
     private void carregarNivel() {
-        // Reinicia a posição do jogador para a origem em cada carregamento
         this.xAtual = 0;
         this.yAtual = 0;
 
-        System.out.println("Iniciando Nível " + sessao.getNivelAtual());
+        System.out.println("Jogador: " + usuario.getNome() + " | Nível: " + sessao.getNivelAtual());
 
-        // 1. Tenta buscar o mapa na memória da sessão
         this.mapa = sessao.getMapaDoNivelAtual();
 
-        // 2. Se o mapa não existe (é a primeira vez no nível), gera um novo e salva
         if (this.mapa == null) {
-            System.out.println("Gerando novo cenário para o nível " + sessao.getNivelAtual());
             this.mapa = new Mapa(15, 15);
             this.mapa.gerarCenarioAleatorio(3 + sessao.getNivelAtual());
             sessao.salvarMapa(this.mapa);
         } else {
-            // 3. Se o mapa já existia, restauramos o estado para uma nova tentativa
-            System.out.println("Mapa restaurado da memória.");
-
-            // Limpa o trajeto antigo para começar o rastro do zero
             this.mapa.getTrajeto().clear();
             this.mapa.adicionarMovimento(xAtual, yAtual);
-
-            // Faz o cristal renascer na posição original (conforme combinado)
             this.mapa.renascerItemEspecial();
         }
 
-        // Configuração da Interface
         this.gameView = new GameView(mapa);
         BorderPane root = new BorderPane();
         root.setCenter(gameView);
@@ -77,30 +71,38 @@ public class GameController {
             case R -> { carregarNivel(); return; }
         }
 
-        // Validação de movimento
         if (mapa.podeMover(novoX, novoY)) {
 
-            // Regra do Alçapão (Trapdoor)
+            // 1. Regra do Alçapão
             if (mapa.isAlcapao(novoX, novoY)) {
                 if (sessao.isTemItemEspecial()) {
-                    System.out.println("Cristal utilizado! Subindo de nível...");
+                    System.out.println("Cristal utilizado!");
                     sessao.avancarNivel();
                 } else {
-                    System.out.println("Sem cristal! Você caiu no alçapão e regrediu de nível.");
+                    System.out.println("Caiu no alçapão!");
                     sessao.voltarNivel();
                 }
-                carregarNivel(); // Recarrega o mapa (novo ou da memória)
+                carregarNivel();
                 return;
             }
 
-            // Executa o movimento
+            // 2. Coleta de Moedas (Pontuação Local do Usuário)
+            Ponto futuraPosicao = new Ponto(novoX, novoY);
+            if (mapa.getMoedas().contains(futuraPosicao)) {
+                // Remove a moeda do mapa e soma pontos ao usuário
+                mapa.coletarMoeda(futuraPosicao);
+                usuario.adicionarPontos(10);
+                System.out.println("Moeda coletada! Total de " + usuario.getNome() + ": " + usuario.getPontuacaoTotal());
+            }
+
+            // 3. Atualiza posição e rastro
             xAtual = novoX;
             yAtual = novoY;
             mapa.adicionarMovimento(xAtual, yAtual);
 
-            // Coleta do Cristal (Item Especial)
+            // 4. Regra do Item Especial
             if (mapa.isItemEspecial(xAtual, yAtual)) {
-                System.out.println("Cristal coletado! Agora você pode usar o alçapão.");
+                System.out.println("Cristal coletado!");
                 sessao.setTemItemEspecial(true);
                 mapa.coletarItemEspecial();
             }

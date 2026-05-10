@@ -223,4 +223,8 @@ public class Mapa {
 	public void coletarItemEspecial() {
 		this.itemEspecial = null; // Remove do mapa quando coletado
 	}
+
+	public void coletarMoeda(Ponto p) {
+		this.moedas.remove(p);
+	}
 }
