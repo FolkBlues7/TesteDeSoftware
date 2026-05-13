@@ -27,55 +27,32 @@ public class LoginController {
             salvarDadosNoArquivo();
         }
 
-        // NOVO: Se o jogador fechar a janela no "X", salva os dados!
-        stage.setOnCloseRequest(event -> salvarDadosNoArquivo());
+        // Se o jogador fechar a janela no "X", salva os dados!
+        if (stage != null) {
+            stage.setOnCloseRequest(event -> salvarDadosNoArquivo());
+        }
     }
 
     public void exibirLogin() {
         LoginView loginView = new LoginView();
 
         loginView.getBotaoEntrar().setOnAction(e -> {
-            Usuario user = autenticar(loginView.getNomeDigitado(), loginView.getSenhaDigitada());
+            Usuario user = tentarLogin(loginView.getNomeDigitado(), loginView.getSenhaDigitada());
             if (user != null) {
-                user.incrementarSessoes();
-                salvarDadosNoArquivo();
-                iniciarJogo(user); // ATUALIZADO: Passa o usuário para o novo método
+                iniciarJogo(user);
             } else {
                 loginView.exibirMensagem("Login ou Senha incorretos!");
             }
         });
 
         loginView.getBotaoCadastrar().setOnAction(e -> {
-            String login = loginView.getNomeDigitado();
-            String senha = loginView.getSenhaDigitada();
-            if (login.isBlank() || senha.isBlank()) {
-                loginView.exibirMensagem("Preencha todos os campos!");
-                return;
-            }
-            if (bancoUsuarios.stream().anyMatch(u -> u.getLogin().equalsIgnoreCase(login))) {
-                loginView.exibirMensagem("Usuário já existe!");
-            } else {
-                bancoUsuarios.add(new Usuario(login, senha, false));
-                salvarDadosNoArquivo();
-                loginView.exibirMensagem("Cadastrado com sucesso!");
-            }
+            String mensagem = tentarCadastrar(loginView.getNomeDigitado(), loginView.getSenhaDigitada());
+            loginView.exibirMensagem(mensagem);
         });
 
         loginView.getBotaoExcluir().setOnAction(e -> {
-            String loginParaDeletar = loginView.getNomeDigitado();
-            Usuario admin = autenticar("admin", loginView.getSenhaDigitada());
-
-            if (admin != null && admin.isSuperUsuario()) {
-                boolean removido = bancoUsuarios.removeIf(u -> u.getLogin().equalsIgnoreCase(loginParaDeletar) && !u.isSuperUsuario());
-                if (removido) {
-                    salvarDadosNoArquivo();
-                    loginView.exibirMensagem("Usuário removido!");
-                } else {
-                    loginView.exibirMensagem("Usuário não encontrado ou é admin.");
-                }
-            } else {
-                loginView.exibirMensagem("Apenas o admin pode excluir (digite senha do admin).");
-            }
+            String mensagem = tentarExcluir(loginView.getNomeDigitado(), loginView.getSenhaDigitada());
+            loginView.exibirMensagem(mensagem);
         });
 
         loginView.getBotaoRanking().setOnAction(e -> {
@@ -87,18 +64,60 @@ public class LoginController {
         stage.show();
     }
 
+    // ==============================================================
+    // LÓGICA DE NEGÓCIO ISOLADA (Totalmente testável sem interface!)
+    // ==============================================================
+
+    public Usuario tentarLogin(String login, String senha) {
+        Usuario user = autenticar(login, senha);
+        if (user != null) {
+            user.incrementarSessoes();
+            salvarDadosNoArquivo();
+            return user;
+        }
+        return null;
+    }
+
+    public String tentarCadastrar(String login, String senha) {
+        if (login == null || login.isBlank() || senha == null || senha.isBlank()) {
+            return "Preencha todos os campos!";
+        }
+        if (bancoUsuarios.stream().anyMatch(u -> u.getLogin().equalsIgnoreCase(login))) {
+            return "Usuário já existe!";
+        }
+        bancoUsuarios.add(new Usuario(login, senha, false));
+        salvarDadosNoArquivo();
+        return "Cadastrado com sucesso!";
+    }
+
+    public String tentarExcluir(String loginParaDeletar, String senhaAdmin) {
+        Usuario admin = autenticar("admin", senhaAdmin);
+
+        if (admin != null && admin.isSuperUsuario()) {
+            boolean removido = bancoUsuarios.removeIf(u -> u.getLogin().equalsIgnoreCase(loginParaDeletar) && !u.isSuperUsuario());
+            if (removido) {
+                salvarDadosNoArquivo();
+                return "Usuário removido!";
+            } else {
+                return "Usuário não encontrado ou é admin.";
+            }
+        } else {
+            return "Apenas o admin pode excluir (digite senha do admin).";
+        }
+    }
+
+    // ==============================================================
+
     private Usuario autenticar(String login, String senha) {
         return bancoUsuarios.stream()
                 .filter(u -> u.getLogin().equals(login) && u.getSenha().equals(senha))
                 .findFirst().orElse(null);
     }
 
-    // ATUALIZADO: O método de iniciar o jogo agora manda o GameController salvar e voltar ao login
     private void iniciarJogo(Usuario usuarioLogado) {
-        // Passamos uma ação (Runnable) para o GameController executar quando o jogador apertar ESC
         GameController game = new GameController(stage, usuarioLogado, () -> {
-            salvarDadosNoArquivo(); // Salva a pontuação no TXT
-            exibirLogin();          // Volta pra tela inicial
+            salvarDadosNoArquivo();
+            exibirLogin();
         });
         game.iniciarJogo();
     }

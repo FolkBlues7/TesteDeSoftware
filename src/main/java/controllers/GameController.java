@@ -99,7 +99,6 @@ public class GameController {
         aplicarRegrasDeMovimento(novoX, novoY);
     }
 
-    // --- LÓGICA PURA ISOLADA PARA TESTES (MC/DC AQUI!) ---
     public void aplicarRegrasDeMovimento(int novoX, int novoY) {
         if (mapa.podeMover(novoX, novoY)) {
 
