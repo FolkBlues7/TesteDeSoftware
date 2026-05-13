@@ -18,11 +18,13 @@ public class GameController {
     private Mapa mapa;
     private GameView gameView;
     private Stage stage;
-    private Runnable onVoltarMenu; // Ação para voltar e salvar
-    private int xAtual = 0;
-    private int yAtual = 0;
+    private Runnable onVoltarMenu;
 
-    // Recebe a ação de voltar
+    // Deixei public para podermos acessar nos testes
+    public int xAtual = 0;
+    public int yAtual = 0;
+    public boolean modoTeste = false; // Flag para ignorar a UI nos testes
+
     public GameController(Stage stage, Usuario usuario, Runnable onVoltarMenu) {
         this.stage = stage;
         this.usuario = usuario;
@@ -30,33 +32,42 @@ public class GameController {
         this.sessao = new SessaoJogo();
     }
 
+    // Construtor exclusivo para os Testes (sem o Stage do JavaFX)
+    public GameController(Usuario usuario, SessaoJogo sessao, Mapa mapa, Runnable onVoltarMenu) {
+        this.usuario = usuario;
+        this.sessao = sessao;
+        this.mapa = mapa;
+        this.onVoltarMenu = onVoltarMenu;
+        this.modoTeste = true;
+    }
+
     public void iniciarJogo() {
         carregarNivel();
     }
 
-    private void carregarNivel() {
+    public void carregarNivel() {
         this.xAtual = 0;
         this.yAtual = 0;
 
-        System.out.println("Jogador: " + usuario.getNome() + " | Nível: " + sessao.getNivelAtual());
-
-        this.mapa = sessao.getMapaDoNivelAtual();
-
-        if (this.mapa == null) {
-            this.mapa = new Mapa(15, 15);
-            this.mapa.gerarCenarioAleatorio(3 + sessao.getNivelAtual());
-            sessao.salvarMapa(this.mapa);
-        } else {
-            this.mapa.getTrajeto().clear();
-            this.mapa.adicionarMovimento(xAtual, yAtual);
-            this.mapa.renascerItemEspecial();
+        if (!modoTeste) {
+            this.mapa = sessao.getMapaDoNivelAtual();
+            if (this.mapa == null) {
+                this.mapa = new Mapa(15, 15);
+                this.mapa.gerarCenarioAleatorio(3 + sessao.getNivelAtual());
+                sessao.salvarMapa(this.mapa);
+            } else {
+                this.mapa.getTrajeto().clear();
+                this.mapa.adicionarMovimento(xAtual, yAtual);
+                this.mapa.renascerItemEspecial();
+            }
+            atualizarInterfaceGrafica();
         }
+    }
 
+    private void atualizarInterfaceGrafica() {
         this.gameView = new GameView(mapa);
         this.hud = new HUDView();
         this.hud.atualizar(usuario, sessao);
-
-        // NOVO: Vincula o clique do botão "Sair pro Menu" à ação de voltar (salvando o jogo)
         this.hud.getBtnSair().setOnAction(e -> onVoltarMenu.run());
 
         BorderPane root = new BorderPane();
@@ -68,7 +79,7 @@ public class GameController {
 
         stage.setScene(scene);
         stage.sizeToScene();
-
+        root.requestFocus();
         gameView.render();
     }
 
@@ -82,20 +93,23 @@ public class GameController {
             case LEFT -> novoX--;
             case RIGHT -> novoX++;
             case R -> { carregarNivel(); return; }
-            case ESCAPE -> { onVoltarMenu.run(); return; } // Tecla ESC salva e volta ao menu!
+            case ESCAPE -> { onVoltarMenu.run(); return; }
         }
 
+        aplicarRegrasDeMovimento(novoX, novoY);
+    }
+
+    // --- LÓGICA PURA ISOLADA PARA TESTES (MC/DC AQUI!) ---
+    public void aplicarRegrasDeMovimento(int novoX, int novoY) {
         if (mapa.podeMover(novoX, novoY)) {
 
             if (mapa.isAlcapao(novoX, novoY)) {
                 if (sessao.isTemItemEspecial()) {
-                    System.out.println("Cristal utilizado!");
                     sessao.avancarNivel();
                 } else {
-                    System.out.println("Caiu no alçapão!");
                     sessao.voltarNivel();
                 }
-                carregarNivel();
+                carregarNivel(); // Reinicia a posição
                 return;
             }
 
@@ -103,21 +117,22 @@ public class GameController {
             if (mapa.getMoedas().contains(futuraPosicao)) {
                 mapa.coletarMoeda(futuraPosicao);
                 usuario.adicionarPontos(10);
-                System.out.println("Moeda coletada! Total de " + usuario.getNome() + ": " + usuario.getPontuacaoTotal());
             }
 
+            // Atualiza posição
             xAtual = novoX;
             yAtual = novoY;
             mapa.adicionarMovimento(xAtual, yAtual);
 
             if (mapa.isItemEspecial(xAtual, yAtual)) {
-                System.out.println("Cristal coletado!");
                 sessao.setTemItemEspecial(true);
                 mapa.coletarItemEspecial();
             }
 
-            gameView.render();
-            hud.atualizar(usuario, sessao);
+            if (!modoTeste) {
+                gameView.render();
+                hud.atualizar(usuario, sessao);
+            }
         }
     }
 }

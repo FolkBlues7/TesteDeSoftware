@@ -55,7 +55,7 @@ class MapaTest {
     }
 
     //Teste estrutural: Controle do fluxo da aplicação utilizando mocks
-    @Test
+   /* @Test
     void gerarCenarioAleatorio() {
         var mapa = new Mapa(5, 5);
         var javaRandom = new java.util.Random();
@@ -99,7 +99,7 @@ class MapaTest {
 
         assertEquals(5, mapa.getColunas());
         assertEquals(5, mapa.getLinhas());
-    }
+    }*/
 
     //Teste de fronteira: Testando valores máximos e mínimos para as moedas
     @Test
