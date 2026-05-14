@@ -1,23 +1,16 @@
 package controllers;
 
-import javafx.scene.Scene;
-import javafx.stage.Stage;
 import models.Usuario;
-import views.LoginView;
-import views.RankingView;
-
 import java.io.*;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class LoginController {
-    private Stage stage;
     private List<Usuario> bancoUsuarios;
     private final String ARQUIVO_PATH = "usuarios.txt";
 
-    public LoginController(Stage stage) {
-        this.stage = stage;
+    public LoginController() {
         this.bancoUsuarios = new ArrayList<>();
         carregarDadosDoArquivo();
 
@@ -25,41 +18,6 @@ public class LoginController {
             bancoUsuarios.add(new Usuario("admin", "123", true));
             salvarDadosNoArquivo();
         }
-
-        if (stage != null) {
-            stage.setOnCloseRequest(event -> salvarDadosNoArquivo());
-        }
-    }
-
-    public void exibirLogin() {
-        LoginView loginView = new LoginView();
-
-        loginView.getBotaoEntrar().setOnAction(e -> {
-            Usuario user = tentarLogin(loginView.getNomeDigitado(), loginView.getSenhaDigitada());
-            if (user != null) {
-                iniciarJogo(user);
-            } else {
-                loginView.exibirMensagem("Login ou Senha incorretos!");
-            }
-        });
-
-        loginView.getBotaoCadastrar().setOnAction(e -> {
-            String mensagem = tentarCadastrar(loginView.getNomeDigitado(), loginView.getSenhaDigitada());
-            loginView.exibirMensagem(mensagem);
-        });
-
-        loginView.getBotaoExcluir().setOnAction(e -> {
-            String mensagem = tentarExcluir(loginView.getNomeDigitado(), loginView.getSenhaDigitada());
-            loginView.exibirMensagem(mensagem);
-        });
-
-        loginView.getBotaoRanking().setOnAction(e -> {
-            stage.getScene().setRoot(new RankingView(bancoUsuarios, this::exibirLogin));
-        });
-
-        Scene scene = new Scene(loginView, 600, 600);
-        stage.setScene(scene);
-        stage.show();
     }
 
     public Usuario tentarLogin(String login, String senha) {
@@ -86,7 +44,6 @@ public class LoginController {
 
     public String tentarExcluir(String loginParaDeletar, String senhaAdmin) {
         Usuario admin = autenticar("admin", senhaAdmin);
-
         if (admin != null && admin.isSuperUsuario()) {
             boolean removido = bancoUsuarios.removeIf(u -> u.getLogin().equalsIgnoreCase(loginParaDeletar) && !u.isSuperUsuario());
             if (removido) {
@@ -100,21 +57,15 @@ public class LoginController {
         }
     }
 
+    public List<Usuario> getBancoUsuarios() { return new ArrayList<>(bancoUsuarios); }
+
     private Usuario autenticar(String login, String senha) {
-        return bancoUsuarios.stream()
+        return getBancoUsuarios().stream()
                 .filter(u -> u.getLogin().equals(login) && u.getSenha().equals(senha))
                 .findFirst().orElse(null);
     }
 
-    private void iniciarJogo(Usuario usuarioLogado) {
-        GameController game = new GameController(stage, usuarioLogado, () -> {
-            salvarDadosNoArquivo();
-            exibirLogin();
-        });
-        game.iniciarJogo();
-    }
-
-    private void salvarDadosNoArquivo() {
+    public void salvarDadosNoArquivo() {
         try (PrintWriter writer = new PrintWriter(new FileWriter(ARQUIVO_PATH))) {
             for (Usuario u : bancoUsuarios) {
                 writer.println(u.getLogin() + ";" + u.getSenha() + ";" +

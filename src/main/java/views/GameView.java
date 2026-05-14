@@ -1,75 +1,77 @@
 package views;
 
-import models.Mapa;
-import models.Ponto;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.layout.StackPane;
-import javafx.scene.paint.Color;
+import controllers.GameController;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
+import javafx.stage.Stage;
 
-public class GameView extends StackPane {
-	private final Canvas canvas;
-	private final Mapa mapa;
-	private final int TAMANHO_CELULA = 40;
+public class GameView extends BorderPane implements GameController.GameListener {
 
-	public GameView(Mapa mapa) {
-		this.mapa = mapa;
-		this.canvas = new Canvas(mapa.getColunas() * TAMANHO_CELULA, mapa.getLinhas() * TAMANHO_CELULA);
-		getChildren().add(canvas);
-		render();
+	private final GameController controller;
+	private final Stage stage;
+	private CanvasView canvasView;
+	private final HUDView hudView;
+
+	public GameView(GameController controller, Stage stage) {
+		this.controller = controller;
+		this.stage = stage;
+		this.hudView = new HUDView();
+
+		setCenter(new Pane());   // placeholder até o primeiro render
+		setTop(hudView);
+		hudView.getBtnSair().setOnAction(e -> controller.getOnVoltarMenu().run());
+
+		controller.setListener(this);
 	}
 
+	public void iniciar() {
+		Scene scene = new Scene(this);
+		scene.setOnKeyPressed(this::tratarTeclado);
+		stage.setScene(scene);
+		stage.sizeToScene();
+		this.requestFocus();
+
+		// Força a primeira renderização após a cena estar visível,
+		// garantindo que o grid e os elementos apareçam imediatamente.
+		render();
+		atualizarHUD();
+	}
+
+	@Override
 	public void render() {
-		GraphicsContext gc = canvas.getGraphicsContext2D();
+		if (canvasView == null) {
+			canvasView = new CanvasView(controller.getMapa());
+			setCenter(canvasView);
+		}
+		canvasView.render(controller.getMapa());
+	}
 
-		gc.setFill(Color.WHITESMOKE);
-		gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+	@Override
+	public void atualizarHUD() {
+		hudView.atualizar(controller.getUsuario(), controller.getSessao());
+	}
 
-		for (int i = 0; i < mapa.getColunas(); i++) {
-			for (int j = 0; j < mapa.getLinhas(); j++) {
-				if (mapa.isObstaculo(i, j)) {
-					gc.setFill(Color.web("#34495e"));
-					gc.fillRect(i * TAMANHO_CELULA, j * TAMANHO_CELULA, TAMANHO_CELULA, TAMANHO_CELULA);
-				}
-				gc.setStroke(Color.LIGHTGRAY);
-				gc.strokeRect(i * TAMANHO_CELULA, j * TAMANHO_CELULA, TAMANHO_CELULA, TAMANHO_CELULA);
+	private void tratarTeclado(KeyEvent event) {
+		int novoX = controller.xAtual;
+		int novoY = controller.yAtual;
+
+		switch (event.getCode()) {
+			case UP -> novoY--;
+			case DOWN -> novoY++;
+			case LEFT -> novoX--;
+			case RIGHT -> novoX++;
+			case R -> {
+				controller.carregarNivel();
+				return;
+			}
+			case ESCAPE -> {
+				controller.getOnVoltarMenu().run();
+				return;
 			}
 		}
 
-		gc.setFill(Color.web("#f1c40f"));
-		for (Ponto moeda : mapa.getMoedas()) {
-			gc.fillOval(moeda.x() * TAMANHO_CELULA + 10, moeda.y() * TAMANHO_CELULA + 10, 20, 20);
-		}
-
-		Ponto item = mapa.getItemEspecial();
-		if (item != null) {
-			gc.setFill(Color.web("#9b59b6"));
-			gc.fillRect(item.x() * TAMANHO_CELULA + 10, item.y() * TAMANHO_CELULA + 10, 20, 20);
-		}
-
-		Ponto alcapao = mapa.getAlcapao();
-		if (alcapao != null) {
-			gc.setFill(Color.web("#5c4033"));
-			gc.fillRect(alcapao.x() * TAMANHO_CELULA + 5, alcapao.y() * TAMANHO_CELULA + 5, 30, 30);
-			gc.setStroke(Color.BLACK);
-			gc.strokeRect(alcapao.x() * TAMANHO_CELULA + 5, alcapao.y() * TAMANHO_CELULA + 5, 30, 30);
-		}
-
-		gc.setStroke(Color.web("#3498db"));
-		gc.setLineWidth(3);
-		var pontos = mapa.getTrajeto();
-		for (int i = 0; i < pontos.size() - 1; i++) {
-			Ponto p1 = pontos.get(i);
-			Ponto p2 = pontos.get(i + 1);
-			gc.strokeLine(p1.x() * TAMANHO_CELULA + (TAMANHO_CELULA / 2.0),
-					p1.y() * TAMANHO_CELULA + (TAMANHO_CELULA / 2.0), p2.x() * TAMANHO_CELULA + (TAMANHO_CELULA / 2.0),
-					p2.y() * TAMANHO_CELULA + (TAMANHO_CELULA / 2.0));
-		}
-
-		if (!pontos.isEmpty()) {
-			Ponto atual = pontos.get(pontos.size() - 1);
-			gc.setFill(Color.web("#e74c3c"));
-			gc.fillOval(atual.x() * TAMANHO_CELULA + 5, atual.y() * TAMANHO_CELULA + 5, 30, 30);
-		}
+		controller.aplicarRegrasDeMovimento(novoX, novoY);
 	}
 }

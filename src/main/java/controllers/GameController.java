@@ -4,35 +4,32 @@ import models.Mapa;
 import models.Ponto;
 import models.SessaoJogo;
 import models.Usuario;
-import views.GameView;
-import views.HUDView;
-import javafx.scene.Scene;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.BorderPane;
-import javafx.stage.Stage;
 
 public class GameController {
-    private HUDView hud;
-    private Usuario usuario;
-    SessaoJogo sessao;
-    Mapa mapa;
-    private GameView gameView;
-    private Stage stage;
+    public interface GameListener {
+        void render();
+        void atualizarHUD();
+    }
+
+    private final Usuario usuario;
+    private SessaoJogo sessao;
+    private Mapa mapa;
+    private GameListener listener;
     private Runnable onVoltarMenu;
 
-    // Deixei public para podermos acessar nos testes
     public int xAtual = 0;
     public int yAtual = 0;
-    public boolean modoTeste = false; // Flag para ignorar a UI nos testes
+    public boolean modoTeste = false;
 
-    public GameController(Stage stage, Usuario usuario, Runnable onVoltarMenu) {
-        this.stage = stage;
+    // Construtor usado pela aplicação real (modo normal)
+    public GameController(Usuario usuario, Runnable onVoltarMenu) {
         this.usuario = usuario;
         this.onVoltarMenu = onVoltarMenu;
         this.sessao = new SessaoJogo();
+        this.modoTeste = false;
     }
 
-    // Construtor exclusivo para os Testes (sem o Stage do JavaFX)
+    // Construtor exclusivo para os testes (injeta dependências mockadas)
     public GameController(Usuario usuario, SessaoJogo sessao, Mapa mapa, Runnable onVoltarMenu) {
         this.usuario = usuario;
         this.sessao = sessao;
@@ -41,12 +38,8 @@ public class GameController {
         this.modoTeste = true;
     }
 
-    public void setGameView(GameView gameView) { this.gameView = gameView; }
-
-    public void setHud(HUDView hud) { this.hud = hud; }
-
-    public void iniciarJogo() {
-        carregarNivel();
+    public void setListener(GameListener listener) {
+        this.listener = listener;
     }
 
     public void carregarNivel() {
@@ -60,82 +53,56 @@ public class GameController {
                 this.mapa.gerarCenarioAleatorio(3 + sessao.getNivelAtual());
                 sessao.salvarMapa(this.mapa);
             } else {
-                this.mapa.getTrajeto().clear();
-                this.mapa.adicionarMovimento(xAtual, yAtual);
-                this.mapa.renascerItemEspecial();
+                getMapa().getTrajeto().clear();
+                getMapa().adicionarMovimento(xAtual, yAtual);
+                getMapa().renascerItemEspecial();
             }
-            atualizarInterfaceGrafica();
+            notificarViews();
         }
     }
-
-    private void atualizarInterfaceGrafica() {
-        this.gameView = new GameView(mapa);
-        this.hud = new HUDView();
-        this.hud.atualizar(usuario, sessao);
-        this.hud.getBtnSair().setOnAction(e -> onVoltarMenu.run());
-
-        BorderPane root = new BorderPane();
-        root.setCenter(gameView);
-        root.setTop(hud);
-
-        Scene scene = new Scene(root);
-        scene.setOnKeyPressed(this::tratarTeclado);
-
-        stage.setScene(scene);
-        stage.sizeToScene();
-        root.requestFocus();
-        gameView.render();
-    }
-
-    void tratarTeclado(KeyEvent event) {
-        int novoX = xAtual;
-        int novoY = yAtual;
-
-        switch (event.getCode()) {
-            case UP -> novoY--;
-            case DOWN -> novoY++;
-            case LEFT -> novoX--;
-            case RIGHT -> novoX++;
-            case R -> { carregarNivel(); return; }
-            case ESCAPE -> { onVoltarMenu.run(); return; }
-        }
-
-        aplicarRegrasDeMovimento(novoX, novoY);
-    }
-
     public void aplicarRegrasDeMovimento(int novoX, int novoY) {
-        if (mapa.podeMover(novoX, novoY)) {
+        if (getMapa().podeMover(novoX, novoY)) {
 
-            if (mapa.isAlcapao(novoX, novoY)) {
-                if (sessao.isTemItemEspecial()) {
-                    sessao.avancarNivel();
+            if (getMapa().isAlcapao(novoX, novoY)) {
+                if (getSessao().isTemItemEspecial()) {
+                    getSessao().avancarNivel();
                 } else {
-                    sessao.voltarNivel();
+                    getSessao().voltarNivel();
                 }
-                carregarNivel(); // Reinicia a posição
+                carregarNivel();
                 return;
             }
 
             Ponto futuraPosicao = new Ponto(novoX, novoY);
-            if (mapa.getMoedas().contains(futuraPosicao)) {
-                mapa.coletarMoeda(futuraPosicao);
-                usuario.adicionarPontos(10);
+            if (getMapa().getMoedas().contains(futuraPosicao)) {
+                getMapa().coletarMoeda(futuraPosicao);
+                getUsuario().adicionarPontos(10);
             }
 
-            // Atualiza posição
             xAtual = novoX;
             yAtual = novoY;
-            mapa.adicionarMovimento(xAtual, yAtual);
+            getMapa().adicionarMovimento(xAtual, yAtual);
 
-            if (mapa.isItemEspecial(xAtual, yAtual)) {
-                sessao.setTemItemEspecial(true);
-                mapa.coletarItemEspecial();
+            if (getMapa().isItemEspecial(xAtual, yAtual)) {
+                getSessao().setTemItemEspecial(true);
+                getMapa().coletarItemEspecial();
             }
 
             if (!modoTeste) {
-                gameView.render();
-                hud.atualizar(usuario, sessao);
+                notificarViews();
             }
+        }
+    }
+
+    public Usuario getUsuario() { return usuario; }
+    public SessaoJogo getSessao() { return sessao; }
+    public Mapa getMapa() { return mapa; }
+    public Runnable getOnVoltarMenu() { return onVoltarMenu; }
+
+    private void notificarViews() {
+        if (listener != null) {
+            listener.render();
+            listener.atualizarHUD();
         }
     }
 }
