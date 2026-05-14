@@ -6,6 +6,13 @@ import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Controlador responsável pela autenticação, cadastro e exclusão de usuários,
+ * persistindo os dados em arquivo texto.
+ *
+ * <p>Invariante: o arquivo de usuários ("usuarios.txt") mantém a lista atualizada
+ * de usuários a cada operação bem-sucedida que modifique o cadastro.
+ */
 public class LoginController {
     private List<Usuario> bancoUsuarios;
     private final String ARQUIVO_PATH = "usuarios.txt";
@@ -20,7 +27,20 @@ public class LoginController {
         }
     }
 
+    /**
+     * Tenta autenticar um usuário com as credenciais fornecidas.
+     *
+     * <pre>
+     * Pré-condição: {@code login} e {@code senha} não nulos.
+     * Pós-condição:
+     *   - Se as credenciais correspondem a um usuário existente, retorna esse usuário
+     *     e incrementa seu contador de sessões, salvando a alteração.
+     *   - Caso contrário, retorna null.
+     * </pre>
+     */
     public Usuario tentarLogin(String login, String senha) {
+        assert login != null : "Login não pode ser nulo";
+        assert senha != null : "Senha não pode ser nula";
         Usuario user = autenticar(login, senha);
         if (user != null) {
             user.incrementarSessoes();
@@ -30,8 +50,21 @@ public class LoginController {
         return null;
     }
 
+    /**
+     * Tenta cadastrar um novo usuário.
+     *
+     * <pre>
+     * Pré-condição: {@code login} e {@code senha} não nulos.
+     * Pós-condição:
+     *   - Se os campos são válidos e o login não existe, o usuário é adicionado e os dados são salvos,
+     *     retornando mensagem de sucesso.
+     *   - Caso contrário, retorna mensagem de erro.
+     * </pre>
+     */
     public String tentarCadastrar(String login, String senha) {
-        if (login == null || login.isBlank() || senha == null || senha.isBlank()) {
+        assert login != null : "Login não pode ser nulo";
+        assert senha != null : "Senha não pode ser nula";
+        if (login.isBlank() || senha.isBlank()) {
             return "Preencha todos os campos!";
         }
         if (bancoUsuarios.stream().anyMatch(u -> u.getLogin().equalsIgnoreCase(login))) {
@@ -42,7 +75,20 @@ public class LoginController {
         return "Cadastrado com sucesso!";
     }
 
+    /**
+     * Exclui um usuário, exigindo a senha do administrador.
+     *
+     * <pre>
+     * Pré-condição: {@code loginParaDeletar} e {@code senhaAdmin} não nulos.
+     * Pós-condição:
+     *   - Se a senha corresponde ao administrador e o usuário alvo existe (e não é o admin),
+     *     o usuário é removido e os dados salvos, retornando mensagem de sucesso.
+     *   - Caso contrário, retorna mensagem de erro apropriada.
+     * </pre>
+     */
     public String tentarExcluir(String loginParaDeletar, String senhaAdmin) {
+        assert loginParaDeletar != null : "Login a deletar não pode ser nulo";
+        assert senhaAdmin != null : "Senha do admin não pode ser nula";
         Usuario admin = autenticar("admin", senhaAdmin);
         if (admin != null && admin.isSuperUsuario()) {
             boolean removido = bancoUsuarios.removeIf(u -> u.getLogin().equalsIgnoreCase(loginParaDeletar) && !u.isSuperUsuario());
