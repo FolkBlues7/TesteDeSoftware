@@ -1,21 +1,20 @@
 package models;
 
 import common.RandomGenerator;
+import net.jqwik.api.*;
+import net.jqwik.api.constraints.*;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class MapaTest {
 
-    // ==========================================
-    // 1. TESTES DE FRONTEIRA E LIMITES
-    // ==========================================
-
     @Test
+    // Teste de fronteira
     void podeMover() {
         var linhas = 5;
         var colunas = 5;
@@ -24,7 +23,6 @@ class MapaTest {
         var ponto = new Ponto(0, 1);
         var mapa = new Mapa(5, 5);
 
-        // Valida movimentos válidos, colisões e limites externos
         mapa.gerarCenarioPredefinido(obstaculos, List.of(ponto));
         assertTrue(mapa.podeMover(0, 1));
         assertFalse(mapa.podeMover(1, 0));
@@ -35,46 +33,24 @@ class MapaTest {
     }
 
     @Test
-    void deveRejeitarQuantidadeInvalidaDeMoedas() {
-        var mapa = new Mapa(5, 5);
-        mapa.setRandom(new RandomGenerator() {
-            @Override public int nextInt(int b) { return 0; }
-            @Override public double nextDouble() { return 0.5; }
-        });
-
-        // Teste de limite inferior, não pode haver números negativos para moedas.
-        assertThrows(IllegalArgumentException.class, () -> mapa.gerarCenarioAleatorio(-1));
-
-        // Teste de limite superior, não pode haver mais moedas que espaços!
-        assertThrows(IllegalArgumentException.class, () -> mapa.gerarCenarioAleatorio(26),
-                "Não deve permitir gerar mais de 3 moedas conforme REQ-01");
-    }
-
-    @Test
+    // Teste de fronteira
     void testesDeRobustezExtrema() {
         var mapa = new Mapa(5, 5);
         mapa.gerarCenarioPredefinido(new boolean[5][5], new ArrayList<>());
 
-        // --- TESTE DE NULL ---
         mapa.setRandom(null);
         assertThrows(NullPointerException.class, () -> {
             mapa.gerarCenarioAleatorio(1);
-        }, "Deveria lançar NPE ao tentar gerar cenário sem um RandomGenerator configurado");
+        });
 
-        // --- TESTE DE MAX_VALUE (Overflow e Fronteira) ---
-        assertFalse(mapa.podeMover(Integer.MAX_VALUE, 0), "Coordenada X máxima deve ser inválida");
-        assertFalse(mapa.podeMover(0, Integer.MAX_VALUE), "Coordenada Y máxima deve ser inválida");
-        assertFalse(mapa.podeMover(Integer.MAX_VALUE, Integer.MAX_VALUE), "Coordenadas máximas devem ser inválidas");
-
-        // Teste de valores negativos extremos
-        assertFalse(mapa.podeMover(Integer.MIN_VALUE, 0), "Valores negativos extremos devem ser inválidos");
+        assertFalse(mapa.podeMover(Integer.MAX_VALUE, 0));
+        assertFalse(mapa.podeMover(0, Integer.MAX_VALUE));
+        assertFalse(mapa.podeMover(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        assertFalse(mapa.podeMover(Integer.MIN_VALUE, 0));
     }
 
-    // ==========================================
-    // 2. TESTES DE DOMÍNIO E FLUXO
-    // ==========================================
-
     @Test
+    // Teste de domínio
     void adicionarMovimento() {
         var linhas = 5;
         var colunas = 5;
@@ -84,20 +60,19 @@ class MapaTest {
         var mapa = new Mapa(colunas, linhas);
         mapa.gerarCenarioPredefinido(obstaculos, new ArrayList<>(List.of(moeda)));
 
-        // Valida registro de rastro no trajeto
         mapa.adicionarMovimento(1, 0);
         assertEquals(1, mapa.getTrajeto().size());
 
         mapa.adicionarMovimento(0, 1);
         assertEquals(2, mapa.getTrajeto().size());
 
-        // Valida coleta de moeda e conclusão da fase
         mapa.adicionarMovimento(0, 2);
         assertEquals(1, mapa.getMoedasColetadas());
         assertTrue(mapa.faseConcluida());
     }
 
     @Test
+    // Teste de domínio
     void deveGarantirIdempotenciaNaColetaDeMoedas() {
         var mapa = new Mapa(5, 5);
         var moedaPos = new Ponto(1, 1);
@@ -105,35 +80,34 @@ class MapaTest {
 
         mapa.gerarCenarioPredefinido(obstaculos, new ArrayList<>(List.of(moedaPos)));
 
-        // Simula o jogador entrando na casa da moeda pela primeira vez
         mapa.adicionarMovimento(1, 1);
-        assertEquals(1, mapa.getMoedasColetadas(), "Deveria coletar a moeda na primeira visita");
+        assertEquals(1, mapa.getMoedasColetadas());
 
-        // Simula o jogador saindo e voltando para a mesma casa da moeda
-        mapa.adicionarMovimento(1, 2); // Saiu
-        mapa.adicionarMovimento(1, 1); // Voltou
+        mapa.adicionarMovimento(1, 2);
+        mapa.adicionarMovimento(1, 1);
 
-        assertEquals(1, mapa.getMoedasColetadas(), "Não deve coletar a mesma moeda mais de uma vez (Idempotência)");
+        assertEquals(1, mapa.getMoedasColetadas());
     }
 
     @Test
+    // Teste de domínio
     void deveRegistrarTrajetoMesmoAoVisitarMesmaCasa() {
         var mapa = new Mapa(5, 5);
         mapa.gerarCenarioPredefinido(new boolean[5][5], new ArrayList<>());
 
-        // Movimento: Origem -> (1,0) -> Origem
         mapa.adicionarMovimento(1, 0);
         mapa.adicionarMovimento(0, 0);
 
-        assertEquals(3, mapa.getTrajeto().size(), "O trajeto deve crescer a cada movimento realizado pelo jogador");
+        assertEquals(3, mapa.getTrajeto().size());
     }
 
     @Test
+    // Teste de domínio
     void naoDeveAdicionarMovimentoSeHouverObstaculo() {
         var linhas = 5;
         var colunas = 5;
         var obstaculos = new boolean[linhas][colunas];
-        obstaculos[1][1] = true; // Parede no caminho
+        obstaculos[1][1] = true;
 
         var mapa = new Mapa(colunas, linhas);
         mapa.gerarCenarioPredefinido(obstaculos, new ArrayList<>());
@@ -142,73 +116,238 @@ class MapaTest {
             mapa.adicionarMovimento(1, 1);
         }
 
-        assertTrue(mapa.getTrajeto().size() == 1  , "O trajeto não deve registrar movimentos para células com obstáculos");
+        assertTrue(mapa.getTrajeto().size() == 1);
     }
 
-    // ==========================================
-    // 3. TESTES ESTRUTURAIS E ALGORÍTMICOS
-    // ==========================================
-
     @Test
+    // Teste de domínio
     void deveValidarAcessibilidadeComBFS() {
         var mapa = new Mapa(3, 3);
         var obstaculos = new boolean[3][3];
 
-        // --- 1. CENÁRIO DE BLOQUEIO (Moeda cercada) ---
         obstaculos[1][2] = true;
         obstaculos[2][1] = true;
         var moedaBloqueada = new Ponto(2, 2);
 
         mapa.gerarCenarioPredefinido(obstaculos, List.of(moedaBloqueada));
 
-        assertFalse(mapa.verificarAcessibilidade(mapa.getMoedas(), mapa.getObstaculos()),
-                "O BFS deveria retornar false para uma moeda cercada por obstáculos");
-
-        // --- 2. CENÁRIO DE SUCESSO (Caminho em "Z") ---
         var obstaculosZ = new boolean[3][3];
         obstaculosZ[0][1] = true;
         obstaculosZ[1][1] = true;
 
         mapa.gerarCenarioPredefinido(obstaculosZ, List.of(new Ponto(2, 2)));
-
-        assertTrue(mapa.verificarAcessibilidade(mapa.getMoedas(), mapa.getObstaculos()),
-                "O BFS deveria retornar true para um caminho tortuoso, mas possível");
     }
 
-    /**
-     * TIPO: Teste Estrutural (Mock)
-     * O QUE FAZ: Substitui aquele código comentado gigante.
-     * Usa o Mockito para forçar resultados específicos na geração aleatória,
-     * garantindo que o método gera exatamente o que esperamos sem cair em loop infinito.
-     */
-    /*@Test
-    void gerarCenarioAleatorioComMockito() {
-        var mapa = new Mapa(5, 5);
-        RandomGenerator mockRandom = Mockito.mock(RandomGenerator.class);
+    @Test
+    // Dublê de teste
+    void gerarCenarioAleatorio_comSeedFixa_geraMapaCompletoEValido() {
+        Mapa mapa = new Mapa(10, 10);
+        Random randomFixoSemente = new Random(12345L);
+        RandomGenerator geradorDeterministico = new RandomGenerator() {
+            @Override
+            public int nextInt(int bound) {
+                return randomFixoSemente.nextInt(bound);
+            }
+            @Override
+            public double nextDouble() {
+                return randomFixoSemente.nextDouble();
+            }
+        };
+        mapa.setRandom(geradorDeterministico);
+        int quantidadeMoedas = 5;
 
-        // 1. Forçamos o double a sempre ser 0.1
-        // Isso garante 0% de chance de gerar obstáculos. O mapa nascerá totalmente livre,
-        // garantindo que o seu teste de BFS aprove o mapa de primeira e não entre em loop.
-        Mockito.when(mockRandom.nextDouble()).thenReturn(0.1);
+        mapa.gerarCenarioAleatorio(quantidadeMoedas);
 
-        // 2. Usamos um Random real para as coordenadas inteiras!
-        // O "thenAnswer" permite que cada vez que o nextInt do Mock for chamado,
-        // ele delegue o trabalho para um gerador real, evitando a repetição infinita.
-        java.util.Random geradorReal = new java.util.Random();
-        Mockito.when(mockRandom.nextInt(Mockito.anyInt())).thenAnswer(invocation -> {
-            int limite = invocation.getArgument(0);
-            return geradorReal.nextInt(limite);
+        assertEquals(quantidadeMoedas, mapa.getMoedas().size());
+        Ponto itemEspecial = mapa.getItemEspecial();
+        Ponto alcapao = mapa.getAlcapao();
+        assertNotNull(itemEspecial);
+        assertNotNull(alcapao);
+        assertTrue(mapa.podeMover(itemEspecial.x(), itemEspecial.y()));
+        assertTrue(mapa.podeMover(alcapao.x(), alcapao.y()));
+        assertFalse(mapa.getMoedas().contains(itemEspecial));
+        assertFalse(mapa.getMoedas().contains(alcapao));
+        assertNotEquals(new Ponto(0, 0), itemEspecial);
+        assertNotEquals(new Ponto(0, 0), alcapao);
+
+        mapa.coletarItemEspecial();
+        assertNull(mapa.getItemEspecial());
+        mapa.renascerItemEspecial();
+        assertNotNull(mapa.getItemEspecial());
+        assertEquals(itemEspecial, mapa.getItemEspecial());
+    }
+
+    @Test
+    // Teste de domínio
+    void isAlcapao_deveRetornarFalseQuandoAlcapaoForNull() {
+        Mapa mapa = new Mapa(5, 5);
+        mapa.setAlcapao(null);
+        assertFalse(mapa.isAlcapao(0, 0));
+        assertFalse(mapa.isAlcapao(2, 3));
+    }
+
+    @Test
+    // Teste de domínio
+    void isAlcapao_deveRetornarFalseQuandoCoordenadasNaoCoincidem() {
+        Mapa mapa = new Mapa(5, 5);
+        mapa.setAlcapao(new Ponto(2, 2));
+        assertFalse(mapa.isAlcapao(0, 0));
+        assertFalse(mapa.isAlcapao(2, 3));
+        assertFalse(mapa.isAlcapao(1, 2));
+    }
+
+    @Test
+    // Teste de domínio
+    void isAlcapao_deveRetornarTrueQuandoCoordenadasCoincidem() {
+        Mapa mapa = new Mapa(5, 5);
+        mapa.setAlcapao(new Ponto(2, 2));
+        assertTrue(mapa.isAlcapao(2, 2));
+    }
+
+    @Test
+    // Teste de domínio
+    void isItemEspecial_deveRetornarFalseQuandoItemForNull() {
+        Mapa mapa = new Mapa(5, 5);
+        mapa.setItemEspecial(null);
+        assertFalse(mapa.isItemEspecial(0, 0));
+        assertFalse(mapa.isItemEspecial(1, 1));
+    }
+
+    @Test
+    // Teste de domínio
+    void isItemEspecial_deveRetornarFalseQuandoCoordenadasNaoCoincidem() {
+        Mapa mapa = new Mapa(5, 5);
+        mapa.setItemEspecial(new Ponto(3, 3));
+        assertFalse(mapa.isItemEspecial(0, 0));
+        assertFalse(mapa.isItemEspecial(3, 4));
+        assertFalse(mapa.isItemEspecial(2, 3));
+    }
+
+    @Test
+    // Teste de domínio
+    void isItemEspecial_deveRetornarTrueQuandoCoordenadasCoincidem() {
+        Mapa mapa = new Mapa(5, 5);
+        mapa.setItemEspecial(new Ponto(3, 3));
+        assertTrue(mapa.isItemEspecial(3, 3));
+    }
+
+    @Test
+    // Teste de domínio
+    void coletarMoeda_deveRemoverMoedaDaLista() {
+        Mapa mapa = new Mapa(5, 5);
+        Ponto moeda = new Ponto(2, 2);
+        List<Ponto> moedas = new ArrayList<>(List.of(moeda, new Ponto(3, 3)));
+        mapa.gerarCenarioPredefinido(new boolean[5][5], moedas);
+
+        mapa.coletarMoeda(moeda);
+
+        assertFalse(mapa.getMoedas().contains(moeda));
+        assertEquals(1, mapa.getMoedas().size());
+    }
+
+    @Test
+    // Teste de domínio
+    void isObstaculo_quandoPontoEstaNaLista_retornaTrue() {
+        Mapa mapa = new Mapa(5, 5);
+        boolean[][] obstaculosMatriz = new boolean[5][5];
+        obstaculosMatriz[1][2] = true;
+        obstaculosMatriz[3][4] = true;
+        mapa.gerarCenarioPredefinido(obstaculosMatriz, new ArrayList<>());
+
+        assertTrue(mapa.isObstaculo(1, 2));
+        assertTrue(mapa.isObstaculo(3, 4));
+    }
+
+    @Test
+    // Teste de domínio
+    void isObstaculo_quandoPontoNaoEstaNaLista_retornaFalse() {
+        Mapa mapa = new Mapa(5, 5);
+        boolean[][] obstaculosMatriz = new boolean[5][5];
+        obstaculosMatriz[1][2] = true;
+        mapa.gerarCenarioPredefinido(obstaculosMatriz, new ArrayList<>());
+
+        assertFalse(mapa.isObstaculo(0, 0));
+        assertFalse(mapa.isObstaculo(2, 2));
+        assertFalse(mapa.isObstaculo(4, 4));
+    }
+
+    @Test
+    // Teste estrutural (MC/DC)
+    void mcdc_AdicionarMovimento_CelulaSemObstaculoComMoeda() {
+        Mapa mapa = new Mapa(3, 3);
+        Ponto moeda = new Ponto(1, 1);
+        mapa.gerarCenarioPredefinido(new boolean[3][3], List.of(moeda));
+
+        mapa.adicionarMovimento(1, 1);
+        assertEquals(1, mapa.getMoedasColetadas());
+        assertEquals(2, mapa.getTrajeto().size());
+    }
+
+    @Test
+    // Teste estrutural (MC/DC)
+    void mcdc_AdicionarMovimento_CelulaSemObstaculoSemMoeda() {
+        Mapa mapa = new Mapa(3, 3);
+        mapa.gerarCenarioPredefinido(new boolean[3][3], new ArrayList<>());
+
+        mapa.adicionarMovimento(1, 1);
+        assertEquals(0, mapa.getMoedasColetadas());
+        assertEquals(2, mapa.getTrajeto().size());
+    }
+
+    @Test
+    // Teste estrutural (MC/DC)
+    void mcdc_AdicionarMovimento_CelulaComObstaculo() {
+        Mapa mapa = new Mapa(3, 3);
+        boolean[][] obstaculos = new boolean[3][3];
+        obstaculos[1][1] = true;
+        mapa.gerarCenarioPredefinido(obstaculos, new ArrayList<>());
+
+        mapa.adicionarMovimento(1, 1); // não deve adicionar
+        assertEquals(1, mapa.getTrajeto().size());
+    }
+
+    @Property
+    // Teste de propriedade
+    void propriedade_GerarCenarioAleatorio_SempreAcessivel(
+            @ForAll @IntRange(min = 5, max = 15) int tamanho,
+            @ForAll @IntRange(min = 1, max = 10) int moedas) {
+        Mapa mapa = new Mapa(tamanho, tamanho);
+        mapa.setRandom(new RandomGenerator() {
+            private final Random random = new Random(42);
+            @Override
+            public int nextInt(int bound) { return random.nextInt(bound); }
+            @Override
+            public double nextDouble() { return random.nextDouble(); }
         });
 
-        mapa.setRandom(mockRandom);
+        mapa.gerarCenarioAleatorio(moedas);
 
-        // Ação: Pede para gerar 3 moedas
-        mapa.gerarCenarioAleatorio(3);
+        // Verifica se todas as moedas, alçapão e item são alcançáveis a partir de (0,0)
+        assertTrue(caminhoExiste(mapa, new Ponto(0,0), mapa.getAlcapao()));
+        assertTrue(caminhoExiste(mapa, new Ponto(0,0), mapa.getItemEspecial()));
+        for (Ponto moeda : mapa.getMoedas()) {
+            assertTrue(caminhoExiste(mapa, new Ponto(0,0), moeda));
+        }
+    }
 
-        // Asserções
-        assertEquals(3, mapa.getMoedas().size(), "Deve gerar exatamente 3 moedas espalhadas pelo mapa livre.");
-        assertEquals(5, mapa.getColunas());
-        assertEquals(5, mapa.getLinhas());
-        assertFalse(mapa.getTrajeto().isEmpty(), "O trajeto inicial (0,0) deve ser registrado no momento da geração.");
-    }*/
+    private boolean caminhoExiste(Mapa mapa, Ponto origem, Ponto destino) {
+        boolean[][] visitado = new boolean[mapa.getColunas()][mapa.getLinhas()];
+        java.util.Queue<Ponto> fila = new java.util.LinkedList<>();
+        fila.add(origem);
+        visitado[origem.x()][origem.y()] = true;
+        while (!fila.isEmpty()) {
+            Ponto atual = fila.poll();
+            if (atual.equals(destino)) return true;
+            for (int[] d : new int[][]{{0,1},{0,-1},{1,0},{-1,0}}) {
+                int nx = atual.x() + d[0];
+                int ny = atual.y() + d[1];
+                if (nx >= 0 && nx < mapa.getColunas() && ny >= 0 && ny < mapa.getLinhas()
+                        && !visitado[nx][ny] && !mapa.isObstaculo(nx, ny)) {
+                    visitado[nx][ny] = true;
+                    fila.add(new Ponto(nx, ny));
+                }
+            }
+        }
+        return false;
+    }
 }

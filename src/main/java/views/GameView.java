@@ -22,15 +22,13 @@ public class GameView extends StackPane {
 	public void render() {
 		GraphicsContext gc = canvas.getGraphicsContext2D();
 
-		// Fundo
 		gc.setFill(Color.WHITESMOKE);
 		gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
-		// 1. Desenha Obstáculos e Grid
 		for (int i = 0; i < mapa.getColunas(); i++) {
 			for (int j = 0; j < mapa.getLinhas(); j++) {
 				if (mapa.isObstaculo(i, j)) {
-					gc.setFill(Color.web("#34495e")); // Cinza escuro
+					gc.setFill(Color.web("#34495e"));
 					gc.fillRect(i * TAMANHO_CELULA, j * TAMANHO_CELULA, TAMANHO_CELULA, TAMANHO_CELULA);
 				}
 				gc.setStroke(Color.LIGHTGRAY);
@@ -38,30 +36,25 @@ public class GameView extends StackPane {
 			}
 		}
 
-		// 2. Desenha Moedas
-		gc.setFill(Color.web("#f1c40f")); // Amarelo Ouro
+		gc.setFill(Color.web("#f1c40f"));
 		for (Ponto moeda : mapa.getMoedas()) {
 			gc.fillOval(moeda.x() * TAMANHO_CELULA + 10, moeda.y() * TAMANHO_CELULA + 10, 20, 20);
 		}
 
-		// 2.1 Desenha o Item Especial (Cristal - Losango ou quadrado roxo)
 		Ponto item = mapa.getItemEspecial();
 		if (item != null) {
-			gc.setFill(Color.web("#9b59b6")); // Roxo
-			// Desenhando um quadrado menor centralizado para representar o item
+			gc.setFill(Color.web("#9b59b6"));
 			gc.fillRect(item.x() * TAMANHO_CELULA + 10, item.y() * TAMANHO_CELULA + 10, 20, 20);
 		}
 
-// 2.2 Desenha o Alçapão (Quadrado marrom escuro com borda)
 		Ponto alcapao = mapa.getAlcapao();
 		if (alcapao != null) {
-			gc.setFill(Color.web("#5c4033")); // Marrom
+			gc.setFill(Color.web("#5c4033"));
 			gc.fillRect(alcapao.x() * TAMANHO_CELULA + 5, alcapao.y() * TAMANHO_CELULA + 5, 30, 30);
 			gc.setStroke(Color.BLACK);
 			gc.strokeRect(alcapao.x() * TAMANHO_CELULA + 5, alcapao.y() * TAMANHO_CELULA + 5, 30, 30);
 		}
 
-		// 3. Desenha o Trajeto
 		gc.setStroke(Color.web("#3498db"));
 		gc.setLineWidth(3);
 		var pontos = mapa.getTrajeto();
@@ -73,8 +66,7 @@ public class GameView extends StackPane {
 					p2.y() * TAMANHO_CELULA + (TAMANHO_CELULA / 2.0));
 		}
 
-		// 4. Desenha o Jogador
-		if (!pontos.isEmpty()) { // NOVO: Proteção contra lista vazia
+		if (!pontos.isEmpty()) {
 			Ponto atual = pontos.get(pontos.size() - 1);
 			gc.setFill(Color.web("#e74c3c"));
 			gc.fillOval(atual.x() * TAMANHO_CELULA + 5, atual.y() * TAMANHO_CELULA + 5, 30, 30);

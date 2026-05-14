@@ -1,14 +1,20 @@
 package controllers;
 
+import javafx.application.Platform;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.stage.Stage;
 import models.Mapa;
 import models.Ponto;
 import models.SessaoJogo;
 import models.Usuario;
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.*;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import views.GameView;
+import views.HUDView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,184 +30,296 @@ public class GameControllerTest {
     private Mapa mapaMock;
     private Runnable voltarMenuMock;
 
+    @BeforeAll
+    public static void initJavaFX() {
+        try {
+            Platform.startup(() -> {});
+        } catch (IllegalStateException e) {
+        }
+    }
+
     @BeforeEach
     public void setup() {
-        // Criando os Dublês de Teste (Mocks)
         usuarioMock = spy(new Usuario("teste", "123", false));
         sessaoMock = mock(SessaoJogo.class);
         mapaMock = mock(Mapa.class);
         voltarMenuMock = mock(Runnable.class);
 
-        // Instanciando o controller no modo de teste (sem JavaFX)
         controller = new GameController(usuarioMock, sessaoMock, mapaMock, voltarMenuMock);
     }
 
-    // ==========================================
-    // 1. TESTES ESTRUTURAIS (100% MC/DC)
-    // ==========================================
-
-    /**
-     * TIPO: Teste Estrutural (Cobertura MC/DC) e Dublê de Teste (Mock)
-     * O QUE FAZ: Verifica a ramificação de falha da condição principal de movimento.
-     * Simula o cenário onde o jogador tenta andar para uma posição inválida (ex: parede).
-     * Garante que as coordenadas do jogador (xAtual, yAtual) não sejam alteradas.
-     */
     @Test
+    // Teste de domínio
+    public void construtorComStageEIniciarJogo() {
+        Stage stageMock = mock(Stage.class);
+        Usuario usuario = new Usuario("jogador", "123", false);
+        Runnable voltarMock = mock(Runnable.class);
+
+        GameController ctrl = new GameController(stageMock, usuario, voltarMock);
+        ctrl.modoTeste = true;
+        ctrl.iniciarJogo();
+
+        assertEquals(0, ctrl.xAtual);
+        assertEquals(0, ctrl.yAtual);
+    }
+
+    @Test
+    // Dublê de teste
+    public void tratarTeclado_teclaUp_chamaRegrasComNovasCoordenadas() {
+        GameController spyController = spy(controller);
+        KeyEvent eventUp = mock(KeyEvent.class);
+        when(eventUp.getCode()).thenReturn(KeyCode.UP);
+
+        spyController.tratarTeclado(eventUp);
+        verify(spyController).aplicarRegrasDeMovimento(0, -1);
+    }
+
+    @Test
+    // Dublê de teste
+    public void tratarTeclado_teclaDown_chamaRegrasComNovasCoordenadas() {
+        GameController spyController = spy(controller);
+        KeyEvent eventDown = mock(KeyEvent.class);
+        when(eventDown.getCode()).thenReturn(KeyCode.DOWN);
+
+        spyController.tratarTeclado(eventDown);
+        verify(spyController).aplicarRegrasDeMovimento(0, 1);
+    }
+
+    @Test
+    // Dublê de teste
+    public void tratarTeclado_teclaLeft_chamaRegrasComNovasCoordenadas() {
+        GameController spyController = spy(controller);
+        KeyEvent eventLeft = mock(KeyEvent.class);
+        when(eventLeft.getCode()).thenReturn(KeyCode.LEFT);
+
+        spyController.tratarTeclado(eventLeft);
+        verify(spyController).aplicarRegrasDeMovimento(-1, 0);
+    }
+
+    @Test
+    // Dublê de teste
+    public void tratarTeclado_teclaRight_chamaRegrasComNovasCoordenadas() {
+        GameController spyController = spy(controller);
+        KeyEvent eventRight = mock(KeyEvent.class);
+        when(eventRight.getCode()).thenReturn(KeyCode.RIGHT);
+
+        spyController.tratarTeclado(eventRight);
+        verify(spyController).aplicarRegrasDeMovimento(1, 0);
+    }
+
+    @Test
+    // Dublê de teste
+    public void tratarTeclado_teclaR_chamaCarregarNivelENaoChamaMovimento() {
+        GameController spyController = spy(controller);
+        KeyEvent eventR = mock(KeyEvent.class);
+        when(eventR.getCode()).thenReturn(KeyCode.R);
+
+        spyController.tratarTeclado(eventR);
+        verify(spyController).carregarNivel();
+        verify(spyController, never()).aplicarRegrasDeMovimento(anyInt(), anyInt());
+    }
+
+    @Test
+    // Dublê de teste
+    public void tratarTeclado_teclaEscape_chamaOnVoltarMenu() {
+        KeyEvent eventEsc = mock(KeyEvent.class);
+        when(eventEsc.getCode()).thenReturn(KeyCode.ESCAPE);
+
+        controller.tratarTeclado(eventEsc);
+        verify(voltarMenuMock).run();
+    }
+
+    @Test
+    // Dublê de teste
+    public void tratarTeclado_outraTecla_chamaRegrasComPosicaoAtual() {
+        GameController spyController = spy(controller);
+        KeyEvent eventF = mock(KeyEvent.class);
+        when(eventF.getCode()).thenReturn(KeyCode.F);
+
+        spyController.tratarTeclado(eventF);
+        verify(spyController).aplicarRegrasDeMovimento(0, 0);
+        verify(spyController, never()).carregarNivel();
+    }
+
+    @Test
+    // Teste estrutural (MC/DC)
     public void mcdc_PodeMoverFalso_NadaAcontece() {
-        // Condição: mapa.podeMover(x,y) retorna FALSE
         when(mapaMock.podeMover(1, 0)).thenReturn(false);
-
         controller.aplicarRegrasDeMovimento(1, 0);
-
-        // x e y devem continuar 0 (não andou)
         assertEquals(0, controller.xAtual);
         assertEquals(0, controller.yAtual);
     }
 
-    /**
-     * TIPO: Teste Estrutural (Cobertura MC/DC) e Dublê de Teste (Mock)
-     * O QUE FAZ: Testa a primeira ramificação da lógica do Alçapão.
-     * Simula o jogador caindo em um alçapão SEM possuir o item especial.
-     * Garante que o jogador seja penalizado e o método voltarNivel() seja acionado.
-     */
     @Test
+    // Teste estrutural (MC/DC)
     public void mcdc_CaiuNoAlcapao_SemItem_VoltaNivel() {
-        // Condições: podeMover = TRUE, isAlcapao = TRUE, isTemItemEspecial = FALSE
         when(mapaMock.podeMover(1, 0)).thenReturn(true);
         when(mapaMock.isAlcapao(1, 0)).thenReturn(true);
         when(sessaoMock.isTemItemEspecial()).thenReturn(false);
 
         controller.aplicarRegrasDeMovimento(1, 0);
-
-        // Comportamento esperado
-        verify(sessaoMock, times(1)).voltarNivel();
+        verify(sessaoMock).voltarNivel();
         verify(sessaoMock, never()).avancarNivel();
     }
 
-    /**
-     * TIPO: Teste Estrutural (Cobertura MC/DC) e Dublê de Teste (Mock)
-     * O QUE FAZ: Testa a segunda ramificação da lógica do Alçapão.
-     * Simula o jogador caindo no alçapão COM o item especial em mãos.
-     * Garante que o jogador utilize o item e o método avancarNivel() seja acionado.
-     */
     @Test
+    // Teste estrutural (MC/DC)
     public void mcdc_CaiuNoAlcapao_ComItem_AvancaNivel() {
-        // Condições: podeMover = TRUE, isAlcapao = TRUE, isTemItemEspecial = TRUE
         when(mapaMock.podeMover(1, 0)).thenReturn(true);
         when(mapaMock.isAlcapao(1, 0)).thenReturn(true);
         when(sessaoMock.isTemItemEspecial()).thenReturn(true);
 
         controller.aplicarRegrasDeMovimento(1, 0);
-
-        // Comportamento esperado
-        verify(sessaoMock, times(1)).avancarNivel();
+        verify(sessaoMock).avancarNivel();
+        verify(sessaoMock, never()).voltarNivel();
     }
 
-    /**
-     * TIPO: Teste Estrutural (Cobertura MC/DC) e Dublê de Teste (Mock)
-     * O QUE FAZ: Valida a ramificação de coleta de itens comuns.
-     * Simula um movimento válido para uma coordenada que contém uma moeda.
-     * Garante que a moeda seja retirada do mapa e que 10 pontos sejam creditados ao usuário.
-     */
     @Test
+    // Teste estrutural (MC/DC)
     public void mcdc_PodeMover_ComMoeda_SemCristal() {
-        // Condições: podeMover = TRUE, isAlcapao = FALSE, temMoeda = TRUE, isItemEspecial = FALSE
         when(mapaMock.podeMover(1, 0)).thenReturn(true);
         when(mapaMock.isAlcapao(1, 0)).thenReturn(false);
-
-        // CORREÇÃO: Usando List em vez de Set
-        List<Ponto> moedas = new ArrayList<>();
-        moedas.add(new Ponto(1, 0));
+        List<Ponto> moedas = List.of(new Ponto(1, 0));
         when(mapaMock.getMoedas()).thenReturn(moedas);
-
         when(mapaMock.isItemEspecial(1, 0)).thenReturn(false);
 
         controller.aplicarRegrasDeMovimento(1, 0);
-
-        // Verifica se coletou e adicionou 10 pontos
-        verify(mapaMock, times(1)).coletarMoeda(any(Ponto.class));
-        verify(usuarioMock, times(1)).adicionarPontos(10);
-        assertEquals(1, controller.xAtual); // Andou
+        verify(mapaMock).coletarMoeda(any(Ponto.class));
+        verify(usuarioMock).adicionarPontos(10);
+        assertEquals(1, controller.xAtual);
+        assertEquals(0, controller.yAtual);
     }
 
-    /**
-     * TIPO: Teste Estrutural (Cobertura MC/DC) e Dublê de Teste (Mock)
-     * O QUE FAZ: Valida a ramificação de coleta do item especial.
-     * Simula um movimento para uma casa que contém o cristal (e nenhuma moeda).
-     * Garante que o status de "TemItemEspecial" na sessão seja atualizado para verdadeiro.
-     */
     @Test
+    // Teste estrutural (MC/DC)
     public void mcdc_PodeMover_SemMoeda_ComCristal() {
-        // Condições: podeMover = TRUE, isAlcapao = FALSE, temMoeda = FALSE, isItemEspecial = TRUE
         when(mapaMock.podeMover(1, 0)).thenReturn(true);
         when(mapaMock.isAlcapao(1, 0)).thenReturn(false);
-
-        // CORREÇÃO: Passando uma lista vazia, pois o cenário é SEM moeda
         when(mapaMock.getMoedas()).thenReturn(new ArrayList<>());
-
         when(mapaMock.isItemEspecial(1, 0)).thenReturn(true);
 
         controller.aplicarRegrasDeMovimento(1, 0);
-
-        // Verifica se pegou o cristal
-        verify(sessaoMock, times(1)).setTemItemEspecial(true);
-        verify(mapaMock, times(1)).coletarItemEspecial();
+        verify(sessaoMock).setTemItemEspecial(true);
+        verify(mapaMock).coletarItemEspecial();
+        assertEquals(1, controller.xAtual);
+        assertEquals(0, controller.yAtual);
     }
 
-    // ==========================================
-    // 2. TESTES DE DOMÍNIO E FRONTEIRA
-    // ==========================================
-
-    /**
-     * TIPO: Teste de Domínio e Fronteira
-     * O QUE FAZ: Testa a transição de estado/fronteira temporal do jogador.
-     * Força o jogador a estar em uma posição distante no mapa e chama o método carregarNivel().
-     * Garante a regra de domínio de que todo novo nível DEVE reiniciar o jogador na coordenada (0, 0).
-     */
     @Test
+    // Teste de domínio
+    public void aplicarRegrasDeMovimento_movimentoSimplesValido_atualizaPosicao() {
+        when(mapaMock.podeMover(1, 0)).thenReturn(true);
+        when(mapaMock.isAlcapao(1, 0)).thenReturn(false);
+        when(mapaMock.getMoedas()).thenReturn(new ArrayList<>());
+        when(mapaMock.isItemEspecial(1, 0)).thenReturn(false);
+
+        controller.aplicarRegrasDeMovimento(1, 0);
+        assertEquals(1, controller.xAtual);
+        assertEquals(0, controller.yAtual);
+        verify(mapaMock).adicionarMovimento(1, 0);
+        verify(usuarioMock, never()).adicionarPontos(anyInt());
+        verify(sessaoMock, never()).setTemItemEspecial(anyBoolean());
+    }
+
+    @Test
+    // Teste de domínio
+    public void aplicarRegrasDeMovimento_celulaComMoedaEItemEspecial_coletaAmbos() {
+        when(mapaMock.podeMover(1, 0)).thenReturn(true);
+        when(mapaMock.isAlcapao(1, 0)).thenReturn(false);
+        List<Ponto> moedas = List.of(new Ponto(1, 0));
+        when(mapaMock.getMoedas()).thenReturn(moedas);
+        when(mapaMock.isItemEspecial(1, 0)).thenReturn(true);
+
+        controller.aplicarRegrasDeMovimento(1, 0);
+        verify(mapaMock).coletarMoeda(any(Ponto.class));
+        verify(usuarioMock).adicionarPontos(10);
+        verify(sessaoMock).setTemItemEspecial(true);
+        verify(mapaMock).coletarItemEspecial();
+        assertEquals(1, controller.xAtual);
+        assertEquals(0, controller.yAtual);
+    }
+
+    @Test
+    // Dublê de teste
+    public void aplicarRegrasDeMovimento_modoNaoTeste_atualizaUI() {
+        Stage stageMock = mock(Stage.class);
+        GameView gameViewMock = mock(GameView.class);
+        HUDView hudViewMock = mock(HUDView.class);
+        Usuario usuario = new Usuario("teste", "123", false);
+        SessaoJogo sessao = mock(SessaoJogo.class);
+        Mapa mapa = mock(Mapa.class);
+        Runnable voltarMock = mock(Runnable.class);
+
+        GameController ctrl = new GameController(stageMock, usuario, voltarMock);
+        ctrl.sessao = sessao;
+        ctrl.mapa = mapa;
+        ctrl.setGameView(gameViewMock);
+        ctrl.setHud(hudViewMock);
+        ctrl.modoTeste = false;
+        ctrl.xAtual = 0;
+        ctrl.yAtual = 0;
+
+        when(mapa.podeMover(1, 0)).thenReturn(true);
+        when(mapa.isAlcapao(1, 0)).thenReturn(false);
+        when(mapa.getMoedas()).thenReturn(new ArrayList<>());
+        when(mapa.isItemEspecial(1, 0)).thenReturn(false);
+
+        ctrl.aplicarRegrasDeMovimento(1, 0);
+        verify(gameViewMock).render();
+        verify(hudViewMock).atualizar(usuario, sessao);
+    }
+
+    @Test
+    // Teste de domínio
     public void dominio_ResetDeCoordenadasAoCarregarNivel() {
-        // Simula que o personagem estava longe
         controller.xAtual = 10;
         controller.yAtual = 14;
-
-        // Fronteira de estado: carregar o nível OBRIGA x e y a virarem 0
         controller.carregarNivel();
-
         assertEquals(0, controller.xAtual);
         assertEquals(0, controller.yAtual);
     }
 
-    // ==========================================
-    // 3. TESTES DE PROPRIEDADE (JQWIK)
-    // ==========================================
+    @Test
+    // Teste de fronteira
+    public void fronteira_MovimentoParaForaDoMapa_NaoAlteraPosicao() {
+        when(mapaMock.podeMover(-1, 0)).thenReturn(false);
+        when(mapaMock.podeMover(0, -1)).thenReturn(false);
+        when(mapaMock.podeMover(100, 0)).thenReturn(false);
+        when(mapaMock.podeMover(0, 100)).thenReturn(false);
 
-    /**
-     * TIPO: Teste de Propriedade (Property-Based Testing)
-     * O QUE FAZ: Avalia uma regra (propriedade) universal do jogo contra milhares de cenários.
-     * O Jqwik gera coordenadas X e Y totalmente aleatórias (incluindo números negativos e fora dos limites).
-     * A propriedade garantida aqui é: independentemente do "lixo" ou input inválido passado
-     * para a regra de movimento, as coordenadas do jogador NUNCA podem ficar negativas.
-     */
+        controller.aplicarRegrasDeMovimento(-1, 0);
+        assertEquals(0, controller.xAtual);
+        assertEquals(0, controller.yAtual);
+
+        controller.aplicarRegrasDeMovimento(0, -1);
+        assertEquals(0, controller.xAtual);
+        assertEquals(0, controller.yAtual);
+
+        controller.aplicarRegrasDeMovimento(100, 0);
+        assertEquals(0, controller.xAtual);
+        assertEquals(0, controller.yAtual);
+
+        controller.aplicarRegrasDeMovimento(0, 100);
+        assertEquals(0, controller.xAtual);
+        assertEquals(0, controller.yAtual);
+    }
+
     @Property
-    public boolean propriedade_NuncaDeveEstarEmPosicaoInvalida(
-            @ForAll @IntRange(min = -10, max = 20) int randomX,
-            @ForAll @IntRange(min = -10, max = 20) int randomY) {
+    // Teste de propriedade
+    void propriedade_MovimentoInvalidoNuncaAlteraPosicao(
+            @ForAll @IntRange(min = -100, max = 100) int x,
+            @ForAll @IntRange(min = -100, max = 100) int y) {
+        Usuario usuario = spy(new Usuario("teste", "123", false));
+        SessaoJogo sessao = mock(SessaoJogo.class);
+        Mapa mapa = mock(Mapa.class);
+        when(mapa.podeMover(anyInt(), anyInt())).thenReturn(false);
+        GameController controller = new GameController(usuario, sessao, mapa, mock(Runnable.class));
 
-        // Dublê permitindo apenas movimentos válidos na regra do mapa (ex: 0 a 14)
-        Mapa mapaReal = new Mapa(15, 15);
-        GameController ctrlPropriedade = new GameController(
-                new Usuario("teste", "123", false),
-                new SessaoJogo(),
-                mapaReal,
-                () -> {}
-        );
-        ctrlPropriedade.modoTeste = true;
+        int xAntes = controller.xAtual;
+        int yAntes = controller.yAtual;
+        controller.aplicarRegrasDeMovimento(x, y);
 
-        // Tenta aplicar o movimento gerado aleatoriamente pelo Jqwik
-        ctrlPropriedade.aplicarRegrasDeMovimento(randomX, randomY);
-
-        // Propriedade universal: as coordenadas atuais do jogador NUNCA podem ser negativas
-        // se a lógica do mapa estiver funcionando.
-        return ctrlPropriedade.xAtual >= 0 && ctrlPropriedade.yAtual >= 0;
+        assertEquals(xAntes, controller.xAtual);
+        assertEquals(yAntes, controller.yAtual);
     }
 }

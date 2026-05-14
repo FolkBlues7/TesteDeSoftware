@@ -21,13 +21,11 @@ public class LoginController {
         this.bancoUsuarios = new ArrayList<>();
         carregarDadosDoArquivo();
 
-        // Garante que sempre exista um admin se a lista estiver vazia
         if (bancoUsuarios.isEmpty()) {
             bancoUsuarios.add(new Usuario("admin", "123", true));
             salvarDadosNoArquivo();
         }
 
-        // Se o jogador fechar a janela no "X", salva os dados!
         if (stage != null) {
             stage.setOnCloseRequest(event -> salvarDadosNoArquivo());
         }
@@ -63,10 +61,6 @@ public class LoginController {
         stage.setScene(scene);
         stage.show();
     }
-
-    // ==============================================================
-    // LÓGICA DE NEGÓCIO ISOLADA (Totalmente testável sem interface!)
-    // ==============================================================
 
     public Usuario tentarLogin(String login, String senha) {
         Usuario user = autenticar(login, senha);
@@ -106,8 +100,6 @@ public class LoginController {
         }
     }
 
-    // ==============================================================
-
     private Usuario autenticar(String login, String senha) {
         return bancoUsuarios.stream()
                 .filter(u -> u.getLogin().equals(login) && u.getSenha().equals(senha))
@@ -122,7 +114,6 @@ public class LoginController {
         game.iniciarJogo();
     }
 
-    // --- PERSISTÊNCIA ---
     private void salvarDadosNoArquivo() {
         try (PrintWriter writer = new PrintWriter(new FileWriter(ARQUIVO_PATH))) {
             for (Usuario u : bancoUsuarios) {

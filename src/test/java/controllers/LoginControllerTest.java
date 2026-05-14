@@ -7,11 +7,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 public class LoginControllerTest {
 
@@ -24,7 +26,6 @@ public class LoginControllerTest {
         try {
             Platform.startup(() -> {});
         } catch (IllegalStateException e) {
-            // Ignora se já estiver inicializado
         }
     }
 
@@ -40,38 +41,32 @@ public class LoginControllerTest {
         new File(ARQUIVO_TESTE).delete();
     }
 
-    // ==========================================
-    // 1. TESTES DO FLUXO DE LOGIN
-    // ==========================================
-
     @Test
+    // Teste de domínio
     public void login_Sucesso() {
         Usuario logado = controller.tentarLogin("admin", "123");
-        assertNotNull(logado, "O login deveria funcionar com credenciais corretas.");
+        assertNotNull(logado);
         assertEquals("admin", logado.getLogin());
-        assertEquals(1, logado.getSessoesExecutadas(), "Deveria incrementar a sessão.");
+        assertEquals(1, logado.getSessoesExecutadas());
     }
 
     @Test
+    // Teste de domínio
     public void login_FalhaSenhaIncorreta() {
         Usuario logado = controller.tentarLogin("admin", "senhaErrada");
-        assertNull(logado, "Não deveria logar com senha incorreta.");
+        assertNull(logado);
     }
 
-    // ==========================================
-    // 2. TESTES DO FLUXO DE CADASTRO
-    // ==========================================
-
     @Test
+    // Teste de domínio
     public void cadastro_Sucesso() {
         String msg = controller.tentarCadastrar("jogador1", "senha1");
         assertEquals("Cadastrado com sucesso!", msg);
-
-        // Verifica se realmente salva e consegue logar logo em seguida
         assertNotNull(controller.tentarLogin("jogador1", "senha1"));
     }
 
     @Test
+    // Teste de domínio
     public void cadastro_FalhaCamposVazios() {
         assertEquals("Preencha todos os campos!", controller.tentarCadastrar("", "123"));
         assertEquals("Preencha todos os campos!", controller.tentarCadastrar("joao", "  "));
@@ -79,44 +74,78 @@ public class LoginControllerTest {
     }
 
     @Test
+    // Teste de domínio
     public void cadastro_FalhaUsuarioJaExiste() {
-        controller.tentarCadastrar("jogador1", "senha1"); // Cadastra a primeira vez
-        String msg = controller.tentarCadastrar("JOGADOR1", "outrasenha"); // Tenta de novo (case insensitive)
+        controller.tentarCadastrar("jogador1", "senha1");
+        String msg = controller.tentarCadastrar("JOGADOR1", "outrasenha");
         assertEquals("Usuário já existe!", msg);
     }
 
-    // ==========================================
-    // 3. TESTES DO FLUXO DE EXCLUSÃO
-    // ==========================================
-
     @Test
+    // Teste de domínio
     public void excluir_Sucesso() {
-        controller.tentarCadastrar("jogador1", "senha1"); // Cria o alvo
-
-        String msg = controller.tentarExcluir("jogador1", "123"); // Deleta com senha do admin
+        controller.tentarCadastrar("jogador1", "senha1");
+        String msg = controller.tentarExcluir("jogador1", "123");
         assertEquals("Usuário removido!", msg);
-
-        // Tenta logar com o deletado para garantir que sumiu
         assertNull(controller.tentarLogin("jogador1", "senha1"));
     }
 
     @Test
+    // Teste de domínio
     public void excluir_FalhaSenhaAdminIncorreta() {
         controller.tentarCadastrar("jogador1", "senha1");
-
         String msg = controller.tentarExcluir("jogador1", "senhaFalsaAdmin");
         assertEquals("Apenas o admin pode excluir (digite senha do admin).", msg);
     }
 
     @Test
+    // Teste de domínio
     public void excluir_FalhaExcluirOProprioAdmin() {
         String msg = controller.tentarExcluir("admin", "123");
         assertEquals("Usuário não encontrado ou é admin.", msg);
     }
 
     @Test
+    // Teste de domínio
     public void excluir_FalhaUsuarioInexistente() {
         String msg = controller.tentarExcluir("fantasma", "123");
         assertEquals("Usuário não encontrado ou é admin.", msg);
+    }
+
+    @Test
+    // Teste de fronteira
+    public void fronteira_LoginComStringsMuitoLongas() {
+        String longa = "a".repeat(10000);
+        Usuario logado = controller.tentarLogin(longa, "123");
+        assertNull(logado);
+    }
+
+    @Test
+    // Teste estrutural (MC/DC)
+    public void mcdc_ExcluirAdminNulo_NaoAutorizado() {
+        // Para forçar admin == null, usamos senha errada, autenticar retorna null
+        String msg = controller.tentarExcluir("jogador1", "senhaErrada");
+        assertEquals("Apenas o admin pode excluir (digite senha do admin).", msg);
+    }
+
+    @Test
+    // Teste estrutural (MC/DC)
+    public void mcdc_ExcluirAdminValidoERemovidoTrue_RetornaSucesso() {
+        controller.tentarCadastrar("jogador1", "senha1");
+        String msg = controller.tentarExcluir("jogador1", "123"); // admin super, removido true
+        assertEquals("Usuário removido!", msg);
+    }
+
+    @Test
+    // Teste estrutural (MC/DC)
+    public void mcdc_ExcluirAdminValidoERemovidoFalse_RetornaErro() {
+        String msg = controller.tentarExcluir("inexistente", "123"); // removido false
+        assertEquals("Usuário não encontrado ou é admin.", msg);
+    }
+
+    @Test
+    // Dublê de teste
+    public void duble_StageRegistraOnCloseRequest() {
+        verify(stageMock).setOnCloseRequest(any());
     }
 }

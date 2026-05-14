@@ -14,8 +14,8 @@ import javafx.stage.Stage;
 public class GameController {
     private HUDView hud;
     private Usuario usuario;
-    private SessaoJogo sessao;
-    private Mapa mapa;
+    SessaoJogo sessao;
+    Mapa mapa;
     private GameView gameView;
     private Stage stage;
     private Runnable onVoltarMenu;
@@ -40,6 +40,10 @@ public class GameController {
         this.onVoltarMenu = onVoltarMenu;
         this.modoTeste = true;
     }
+
+    public void setGameView(GameView gameView) { this.gameView = gameView; }
+
+    public void setHud(HUDView hud) { this.hud = hud; }
 
     public void iniciarJogo() {
         carregarNivel();
@@ -83,7 +87,7 @@ public class GameController {
         gameView.render();
     }
 
-    private void tratarTeclado(KeyEvent event) {
+    void tratarTeclado(KeyEvent event) {
         int novoX = xAtual;
         int novoY = yAtual;
 
