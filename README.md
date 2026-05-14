@@ -47,6 +47,115 @@ Os testes validam cenários onde:
 - O jogador atinge um obstáculo interno (O resultado deve ser `false` mesmo estando dentro do mapa).
 - O jogador move para uma área livre (O resultado deve ser `true`).
 
+### 4. Testes Detalhados por Componente
+
+#### 4.1. `GameControllerTest.java`
+
+- **Testes de Domínio:**
+    - `construtorComUsuarioSessaoEMapaIniciaModoTeste`: Verifica se o controller inicia em modo de teste com coordenadas zeradas.
+    - `construtorSemSessaoEMapaIniciaModoNormal`: Garante que o controller inicia em modo normal sem sessão e mapa.
+    - `carregarNivelResetaCoordenadas`: Valida se o carregamento de nível redefine as coordenadas x e y para zero.
+    - `getOnVoltarMenuRetornaRunnableInjetado`: Verifica a recuperação da ação de voltar ao menu.
+    - `movimentoValidoAtualizaCoordenadasERegistraMovimento`: Confirma que movimentações válidas mudam as coordenadas e registram os passos.
+- **Testes Estruturais (MC/DC):**
+    - `carregarNivelComMapaNuloCriaNovoMapaENotifica`: Valida a criação de um novo mapa e notificação do listener quando o mapa na sessão é nulo.
+    - `carregarNivelSemListenerNaoLancaExcecao`: Verifica que a ausência de um listener não causa exceção.
+    - `mcdc_MovimentoParaPosicaoBloqueadaNaoAlteraEstado`: Garante que tentar ir para uma posição bloqueada não altera as coordenadas do jogador.
+    - `mcdc_AlcapaoSemItemVoltaNivel`: Verifica se cair no alçapão sem o item especial faz a sessão voltar um nível.
+    - `mcdc_AlcapaoComItemAvancaNivel`: Verifica se acessar o alçapão com o item especial avança a sessão para o próximo nível.
+    - `mcdc_MovimentoComMoedaAdicionaPontos`: Valida que mover-se para um local com moeda resulta em pontos.
+    - `mcdc_MovimentoComCristalAtivaItemEspecial`: Valida a coleta de cristal ativando o item especial na sessão.
+- **Testes com Dublê:**
+    - `carregarNivelEmModoNormalNotificaListener`: Garante que o carregamento do nível em modo normal chama os métodos de renderização e atualização do HUD do listener.
+    - `movimentoValidoEmModoNormalNotificaListener`: Verifica as notificações à UI após o movimento ser bem-sucedido.
+- **Testes de Fronteira:**
+    - `movimentoForaDosLimitesNaoAlteraPosicao`: Garante que movimentações para coordenadas inválidas/limites não alteram a posição do jogador.
+- **Testes de Propriedade:**
+    - `movimentoInvalidoNuncaAlteraPosicao`: Checa em larga escala diversas coordenadas fora dos limites para assegurar a imutabilidade da posição.
+
+#### 4.2. `LoginControllerTest.java`
+
+- **Testes de Domínio:**
+    - `loginComCredenciaisCorretasRetornaUsuarioEIncrementaSessao`: Assegura o sucesso do login e incremento de sessões.
+    - `loginComSenhaIncorretaRetornaNulo`: Confirma a recusa de autenticação com senhas erradas.
+    - `cadastroComSucesso`: Valida um fluxo feliz de registro de novo usuário.
+    - `cadastroComUsuarioExistenteFalha`: Evita o cadastro de usuários com logins duplicados.
+    - `excluirUsuarioPorAdminRemoveELograSucesso`: Testa as permissões do administrador ao deletar perfis.
+    - `excluirUsuarioInexistenteRetornaMensagem`: Valida mensagens corretas para contas não achadas ou na tentativa de deletar o admin.
+- **Testes de Fronteira:**
+    - `loginComCredenciaisEmBrancoOuNulasRetornaNulo`: Teste parametrizado para strings nulas, espaços e tabulações.
+    - `loginComStringsMuitoLongasNaoLancaExcecao`: Submete credenciais enormes para confirmar a estabilidade.
+- **Testes Estruturais (MC/DC):**
+    - `cadastroComLoginNulo`, `cadastroComLoginVazio`, `cadastroComSenhaNula`, `cadastroComSenhaVazia`: Garantem a recusa de dados parciais.
+    - `excluirComSenhaAdminIncorretaFalha`: Impede falhas na autorização da senha de exclusão.
+    - `excluirQuandoAdminNaoESuperUsuarioFalha`: Simula um admin sem flag de super usuário tentando realizar exclusões.
+    - `carregarArquivoIgnoraLinhasMalformadas`: Assegura que corrupções parciais de arquivo sejam puladas.
+    - `carregarArquivoComIOExceptionNaoInterrompeConstructor`: Injeta um diretório para forçar falha física na leitura.
+- **Testes de Propriedade:**
+    - `qualquerCredencialAleatoriaNaoExistenteRetornaNulo`: Confirma que credenciais sintéticas não ativas não conseguem fazer bypass na verificação.
+
+#### 4.3. `MapaTest.java`
+
+- **Testes de Domínio:**
+    - `adicionarMovimento`: Foca no preenchimento do trajeto percorrido e detecção de encerramento da fase.
+    - `deveGarantirIdempotenciaNaColetaDeMoedas`: Confirma que o usuário não ganha moedas repetidas retornando na mesma casa.
+    - `deveRegistrarTrajetoMesmoAoVisitarMesmaCasa`: Afirma que bater idas e vindas marca todos os passos para trilhar.
+    - `naoDeveAdicionarMovimentoSeHouverObstaculo`: Barra salvamento de trajetórias em blocos proibidos.
+    - `deveValidarAcessibilidadeComBFS`: Constrói cenários bloqueados e checa comportamentos.
+    - `coletarMoeda_deveRemoverMoedaDaLista`: Testa a remoção de moedas da lista.
+    - `isObstaculo_quandoPontoEstaNaLista_retornaTrue` / `..._retornaFalse`: Busca exatidão nas colisões com obstáculos.
+    - `Testes de isAlcapao e isItemEspecial`: Seis testes confirmando todas as permutações desses dois elementos.
+- **Testes de Fronteira:**
+    - `podeMover`: Valida o movimento nas bordas superior, inferior, direita e esquerda.
+    - `testesDeRobustezExtrema`: Lança valores de `MAX_VALUE` e `MIN_VALUE` em coordenadas de movimentação e `null pointers` no `Randomizer`.
+- **Testes Estruturais (MC/DC):**
+    - `mcdc_AdicionarMovimento`: Três testes batendo em caminhos vazios, caminhos contendo moedas e batidas em obstáculos.
+- **Testes com Dublê:**
+    - `gerarCenarioAleatorio_comSeedFixa_geraMapaCompletoEValido`: Simula a classe utilitária random garantindo a disposição do item, das moedas e da portinhola com resultados predefinidos.
+- **Testes de Propriedade:**
+    - `propriedade_GerarCenarioAleatorio_SempreAcessivel`: Garante que, a despeito do gerador randômico, todos os itens ofereçam rotas seguras alcançáveis a partir da posição inicial.
+
+#### 4.4. `SessaoJogoTest.java`
+
+- **Testes de Domínio:**
+    - `dominio_EstadoInicialDaSessao`: Valida valores padrões de início (nível 1 e sem cristal).
+    - `dominio_PodePegarItemEspecial`: Testa a manipulação do flag do item especial.
+- **Testes Estruturais (MC/DC):**
+    - `estrutural_AvancarNivelConsomeItemEAvanca`: Valida o avanço do level perdendo o cristal coletado.
+    - `estrutural_VoltarNivelDeFaseAvancadaDiminuiONivelEPerdeItem`: Verifica que o declínio de fases descarta o cristal.
+    - `estrutural_VoltarNivelNoNivelUmNaoVaiParaZero`: Assegura impossibilidade de voltar ao nível 0 do jogo.
+- **Testes de Integração:**
+    - `integracao_SalvarERecuperarMapasCorretamente`: Foca na serialização transitória das memórias das malhas recuadas (com Mockito).
+- **Testes de Fronteira:**
+    - `fronteira_AvancarEVoltarMuitasVezes_NivelNuncaMenorQueUm`: Teste com `for loop` exaustivo retroagindo fases garantindo segurança contra estouramentos numéricos.
+- **Testes de Propriedade:**
+    - `propriedade_NivelNuncaNegativoENaoEstouraIndice`: Teste parametrizado retroagindo e avançando n níveis para solidificar a robustez contra índices inválidos.
+
+#### 4.5. `UsuarioTest.java`
+
+- **Testes de Domínio:**
+    - `dominio_ConstrutorNovoUsuarioIniciaComZeroPontosESessoes`: Testa o construtor primário.
+    - `dominio_ConstrutorDeCarregamentoRestauraValoresCorretamente`: Testa o construtor parametrizado (para reconstrução de saves).
+    - `dominio_AdicionarPontosSomaAoTotal`: Valida somas sequenciais no Score.
+    - `dominio_IncrementarSessoesAumentaDeUmEmUm`: Contabiliza uso do App.
+    - `dominio_GetNomeRetornaOLoginParaOHud`: Testa o retorno do login para o HUD.
+- **Testes de Fronteira:**
+    - `fronteira_AdicionarPontosNegativos`: Identifica se a aplicação aceita números negativos em Score.
+    - `fronteira_PontuacaoAlemDoLimiteInteiro`: Força Overflow de números `int` nas moedas de pontuação.
+- **Testes de Propriedade:**
+    - `propriedade_PontuacaoESessoesNuncaNegativasAposOperacoes`: Afirma que as manipulações intensas não forçam sessões a marcarem valores menores do que zero.
+
+#### 4.6. `JavaRandomGeneratorTest.java`
+
+- **Testes de Domínio:**
+    - `nextInt_alwaysReturnsValueWithinBounds`: Assegura obediência da limitação solicitada ao randômico base inteiro.
+    - `nextDouble_alwaysReturnsValueBetweenZeroAndOne`: Valida comportamento de pontos flutuantes em casa decimal padronizada.
+- **Testes de Fronteira:**
+    - `nextInt_boundZero_throwsException`: Induz um random de zero e valida acionamento da `IllegalArgumentException`.
+- **Testes de Propriedade:**
+    - `nextInt_anyBound_returnsValueInRange`: Gera números caóticos em massa dentro de amarras fixadas pelo framework de teste Jqwik.
+    - `nextDouble_alwaysBetweenZeroAndOne`: Semelhante ao de inteiros usando sementes dinâmicas (`seed`) para ratificar inquebrabilidade do método `double`.
+
 ---
 
 ## 📊 Rastreabilidade de Testes
