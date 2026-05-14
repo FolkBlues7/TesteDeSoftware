@@ -1,4 +1,4 @@
-# Jogo de Exploração de Labirinto (Avaliação 1)
+# Jogo de Exploração de Labirinto (Avaliação 2)
 
 **Repositório dedicado ao arquivamento do(s) software(s) criado(s) na Disciplina de Teste de Software – Ciência da Computação, UFERSA.**
 
