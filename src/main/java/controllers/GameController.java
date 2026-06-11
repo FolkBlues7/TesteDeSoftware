@@ -142,6 +142,11 @@ public class GameController {
             if (getMapa().getMoedas().contains(futuraPosicao)) {
                 getMapa().coletarMoeda(futuraPosicao);
                 getUsuario().adicionarPontos(10);
+
+                // NOVO: Persiste os pontos ganhos imediatamente no arquivo físico
+                if (LoginController.getInstance() != null) {
+                    LoginController.getInstance().salvarDadosNoArquivo();
+                }
             }
 
             xAtual = novoX;

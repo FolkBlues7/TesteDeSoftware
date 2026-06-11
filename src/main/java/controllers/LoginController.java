@@ -14,8 +14,14 @@ import java.util.List;
  * de usuários a cada operação bem-sucedida que modifique o cadastro.
  */
 public class LoginController {
+
+    private static LoginController instance;
     private List<Usuario> bancoUsuarios;
     private final String ARQUIVO_PATH = "usuarios.txt";
+
+    public static LoginController getInstance() {
+        return instance;
+    }
 
     public LoginController() {
         this.bancoUsuarios = new ArrayList<>();
@@ -25,6 +31,7 @@ public class LoginController {
             bancoUsuarios.add(new Usuario("admin", "123", true));
             salvarDadosNoArquivo();
         }
+        instance = this;
     }
 
     /**

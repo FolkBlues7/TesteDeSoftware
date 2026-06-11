@@ -94,7 +94,7 @@ public class LoginControllerTest {
     void cadastroComSenhaNula() {
         assertEquals("Preencha todos os campos!", controller.tentarCadastrar("user", null));
     }
-    
+
 
     @Test
     // Teste de domínio
