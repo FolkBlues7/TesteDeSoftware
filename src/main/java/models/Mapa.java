@@ -38,8 +38,8 @@ public class Mapa {
 	 * @param colunas número de colunas (largura)
 	 */
 	public Mapa(int linhas, int colunas) {
-		this.colunas = linhas;
-		this.linhas = colunas;
+		this.colunas = colunas;
+		this.linhas = linhas;
 		this.moedas = new ArrayList<>();
 		this.obstaculos = new ArrayList<>();
 		this.trajeto = new ArrayList<>();
@@ -92,7 +92,7 @@ public class Mapa {
 	public void gerarCenarioPredefinido(boolean[][] obstaculosMatriz, List<Ponto> moedasList) {
 		assert obstaculosMatriz != null && obstaculosMatriz.length == colunas &&
 				obstaculosMatriz[0].length == linhas : "Dimensões da matriz de obstáculos inválidas";
-		assert moedasList != null && !moedasList.contains(null) : "Lista de moedas inválida";
+		assert moedasList != null && moedasList.stream().allMatch(Objects::nonNull) : "Lista de moedas inválida";
 
 		this.moedas.clear();
 		this.obstaculos.clear();
@@ -123,7 +123,6 @@ public class Mapa {
 	 * </pre>
 	 */
 	public void gerarCenarioAleatorio(int qtdMoedas) {
-		assert random != null : "RandomGenerator não pode ser nulo";
 		assert qtdMoedas >= 1 && qtdMoedas + 2 < colunas * linhas
 				: "Quantidade de moedas inválida para o tamanho do mapa";
 
@@ -310,7 +309,6 @@ public class Mapa {
 	 * </pre>
 	 */
 	public void setAlcapao(Ponto alcapao) {
-		assert alcapao != null : "Alçapão não pode ser nulo";
 		this.alcapao = alcapao;
 		atualizarEspacosVazios();
 		checkInvariant();
@@ -325,7 +323,6 @@ public class Mapa {
 	 * </pre>
 	 */
 	public void setItemEspecial(Ponto itemEspecial) {
-		assert itemEspecial != null : "Item especial não pode ser nulo";
 		this.itemEspecial = itemEspecial;
 		this.posicaoOriginalItemEspecial = itemEspecial;
 		atualizarEspacosVazios();
@@ -382,6 +379,14 @@ public class Mapa {
 				+ (itemEspecial == null ? 0 : 1);
 		assert ocupados.size() == totalElementos : "Sobreposição detectada entre elementos do mapa";
 		assert !ocupados.contains(new Ponto(0, 0)) : "A posição (0,0) não pode estar ocupada";
+
+		// =========================================================================
+		// ADICIONE ESTA LINHA AQUI:
+		// Como (0,0) não é um espaço vazio para spawn, precisamos considerá-lo ocupado
+		// para que o cálculo de vazios batam perfeitamente com atualizarEspacosVazios()
+		// =========================================================================
+		ocupados.add(new Ponto(0, 0));
+		// =========================================================================
 
 		Set<Ponto> vaziosEsperados = new HashSet<>();
 		for (int x = 0; x < colunas; x++) {

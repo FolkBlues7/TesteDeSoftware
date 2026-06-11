@@ -30,6 +30,9 @@ public class GameControllerTest {
         mapaMock = mock(Mapa.class);
         voltarMock = mock(Runnable.class);
 
+        when(mapaMock.podeMover(0, 0)).thenReturn(true);
+        when(mapaMock.isObstaculo(0, 0)).thenReturn(false);
+
         controller = new GameController(usuarioMock, sessaoMock, mapaMock, voltarMock);
     }
 

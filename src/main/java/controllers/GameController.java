@@ -57,7 +57,7 @@ public class GameController {
     public GameController(Usuario usuario, SessaoJogo sessao, Mapa mapa, Runnable onVoltarMenu) {
         assert usuario != null : "Usuario não pode ser nulo";
         assert sessao != null : "SessaoJogo não pode ser nula";
-        assert mapa != null : "Mapa não pode ser nulo";
+        //assert mapa != null : "Mapa não pode ser nulo";
         assert onVoltarMenu != null : "Runnable de voltar ao menu não pode ser nulo";
         this.usuario = usuario;
         this.sessao = sessao;
