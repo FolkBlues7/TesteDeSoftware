@@ -98,11 +98,22 @@ public class SessaoJogoTest {
         assertEquals(1, sessao.getNivelAtual());
     }
 
+    @Test
+    // Teste estrutural: valida contratos da sessão.
+    void contratosDaSessao() throws Exception {
+        assertThrows(AssertionError.class, () -> sessao.salvarMapa(null));
+
+        var nivelAtual = SessaoJogo.class.getDeclaredField("nivelAtual");
+        nivelAtual.setAccessible(true);
+        nivelAtual.setInt(sessao, 0);
+        assertThrows(AssertionError.class, sessao::voltarNivel);
+    }
+
     @Property
         // Teste de propriedade
     void propriedade_NivelNuncaNegativoENaoEstouraIndice(
-            @ForAll @IntRange(min = 0, max = 50) int avancos,
-            @ForAll @IntRange(min = 0, max = 100) int recuos) {
+            @ForAll @IntRange(max = 50) int avancos,
+            @ForAll @IntRange(max = 100) int recuos) {
         SessaoJogo sessao = new SessaoJogo();
         for (int i = 0; i < avancos; i++) {
             sessao.avancarNivel();
@@ -111,6 +122,6 @@ public class SessaoJogoTest {
             sessao.voltarNivel();
         }
         assertTrue(sessao.getNivelAtual() >= 1);
-        assertDoesNotThrow(() -> sessao.getMapaDoNivelAtual());
+        assertDoesNotThrow(sessao::getMapaDoNivelAtual);
     }
 }

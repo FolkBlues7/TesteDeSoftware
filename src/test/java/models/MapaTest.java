@@ -116,7 +116,7 @@ class MapaTest {
             mapa.adicionarMovimento(1, 1);
         }
 
-        assertTrue(mapa.getTrajeto().size() == 1);
+        assertEquals(1, mapa.getTrajeto().size());
     }
 
     @Test
@@ -304,6 +304,43 @@ class MapaTest {
 
         mapa.adicionarMovimento(1, 1); // não deve adicionar
         assertEquals(1, mapa.getTrajeto().size());
+    }
+
+    @Test
+    // Teste estrutural: valida pré-condições do mapa.
+    void contratosDeEntradaDoMapa() {
+        Mapa mapa = new Mapa(3, 3);
+        assertThrows(AssertionError.class, () -> mapa.gerarCenarioPredefinido(null, List.of()));
+        assertThrows(AssertionError.class,
+                () -> mapa.gerarCenarioPredefinido(new boolean[2][3], List.of()));
+        assertThrows(AssertionError.class,
+                () -> mapa.gerarCenarioPredefinido(new boolean[3][2], List.of()));
+        assertThrows(AssertionError.class,
+                () -> mapa.gerarCenarioPredefinido(new boolean[3][3], null));
+        assertThrows(AssertionError.class,
+                () -> mapa.gerarCenarioPredefinido(new boolean[3][3],
+                        java.util.Collections.singletonList(null)));
+        assertThrows(AssertionError.class, () -> mapa.gerarCenarioAleatorio(0));
+        assertThrows(AssertionError.class, () -> mapa.gerarCenarioAleatorio(7));
+        assertThrows(AssertionError.class, mapa::coletarItemEspecial);
+        assertThrows(AssertionError.class, () -> mapa.coletarMoeda(new Ponto(1, 1)));
+    }
+
+    @Test
+    // Teste estrutural: valida invariantes internas do mapa.
+    void invariantesDoMapa() throws Exception {
+        Mapa sobreposto = new Mapa(3, 3);
+        sobreposto.setAlcapao(new Ponto(1, 1));
+        assertThrows(AssertionError.class, () -> sobreposto.setItemEspecial(new Ponto(1, 1)));
+
+        Mapa origemOcupada = new Mapa(3, 3);
+        assertThrows(AssertionError.class, () -> origemOcupada.setAlcapao(new Ponto(0, 0)));
+
+        Mapa vaziosInconsistentes = new Mapa(3, 3);
+        var espacosVazios = Mapa.class.getDeclaredField("espacosVazios");
+        espacosVazios.setAccessible(true);
+        espacosVazios.set(vaziosInconsistentes, new ArrayList<Ponto>());
+        assertThrows(AssertionError.class, () -> vaziosInconsistentes.adicionarMovimento(1, 0));
     }
 
     @Property

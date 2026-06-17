@@ -9,12 +9,13 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import models.Usuario;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 
 public class LoginView extends VBox {
-    private TextField campoNome;
-    private PasswordField campoSenha;
-    private Button botaoEntrar, botaoCadastrar, botaoExcluir, botaoRanking;
-    private Label mensagemAviso;
+    private final TextField campoNome;
+    private final PasswordField campoSenha;
+    private final Button botaoEntrar, botaoCadastrar, botaoExcluir, botaoRanking;
+    private final Label mensagemAviso;
     private final LoginController controller;
     private final Consumer<Usuario> onLoginSucesso;
 
@@ -33,10 +34,12 @@ public class LoginView extends VBox {
         campoNome = new TextField();
         campoNome.setPromptText("Login...");
         campoNome.setMaxWidth(250);
+        campoNome.setTextFormatter(new TextFormatter<>(filtroLogin()));
 
         campoSenha = new PasswordField();
         campoSenha.setPromptText("Senha...");
         campoSenha.setMaxWidth(250);
+        campoSenha.setTextFormatter(new TextFormatter<>(filtroSenha()));
 
         botaoEntrar = new Button("Entrar");
         botaoCadastrar = new Button("Cadastrar");
@@ -83,5 +86,29 @@ public class LoginView extends VBox {
                 scene.setRoot(this);
             }));
         });
+    }
+
+    private UnaryOperator<TextFormatter.Change> filtroLogin() {
+        return change -> {
+            String novoTexto = change.getControlNewText();
+            if (novoTexto.length() > LoginController.LOGIN_MAX_LENGTH) {
+                return null;
+            }
+            boolean valido = novoTexto.chars().allMatch(c ->
+                    Character.isLetterOrDigit(c) || c == '_' || c == '.' || c == '-');
+            return valido ? change : null;
+        };
+    }
+
+    private UnaryOperator<TextFormatter.Change> filtroSenha() {
+        return change -> {
+            String novoTexto = change.getControlNewText();
+            if (novoTexto.length() > LoginController.SENHA_MAX_LENGTH) {
+                return null;
+            }
+            boolean valido = novoTexto.chars().noneMatch(c ->
+                    Character.isWhitespace(c) || Character.isISOControl(c) || c == ';');
+            return valido ? change : null;
+        };
     }
 }

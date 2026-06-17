@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Coverage: All Tests" type="JUnit" factoryName="JUnit">
+  <configuration default="false" name="Coverage: Production Packages" type="JUnit" factoryName="JUnit">
     <module name="examples-ST" />
     <extension name="coverage">
       <pattern>
@@ -11,6 +11,18 @@
         <option name="PATTERN" value="views.*" />
         <option name="ENABLED" value="true" />
         <option name="INCLUDE" value="false" />
+      </pattern>
+      <pattern>
+        <option name="PATTERN" value="common.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+      <pattern>
+        <option name="PATTERN" value="controllers.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+      <pattern>
+        <option name="PATTERN" value="models.*" />
+        <option name="ENABLED" value="true" />
       </pattern>
     </extension>
     <option name="PACKAGE_NAME" value="" />

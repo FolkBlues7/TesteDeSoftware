@@ -15,15 +15,28 @@ import java.util.List;
  */
 public class LoginController {
 
+    private static final String PROPRIEDADE_ARQUIVO = "app.usuarios.path";
+    public static final int LOGIN_MIN_LENGTH = 3;
+    public static final int LOGIN_MAX_LENGTH = 20;
+    public static final int SENHA_MIN_LENGTH = 3;
+    public static final int SENHA_MAX_LENGTH = 32;
+    private static final String MENSAGEM_CAMPOS_OBRIGATORIOS = "Preencha todos os campos!";
+    private static final String MENSAGEM_ENTRADA_INVALIDA = "Entrada inválida!";
     private static LoginController instance;
-    private List<Usuario> bancoUsuarios;
-    private final String ARQUIVO_PATH = "usuarios.txt";
+    private final List<Usuario> bancoUsuarios;
+    private final Path arquivoPath;
 
     public static LoginController getInstance() {
         return instance;
     }
 
     public LoginController() {
+        this(Path.of(System.getProperty(PROPRIEDADE_ARQUIVO, "usuarios.txt")));
+    }
+
+    public LoginController(Path arquivoPath) {
+        assert arquivoPath != null : "Caminho do arquivo não pode ser nulo";
+        this.arquivoPath = arquivoPath;
         this.bancoUsuarios = new ArrayList<>();
         carregarDadosDoArquivo();
 
@@ -46,7 +59,7 @@ public class LoginController {
      * </pre>
      */
     public Usuario tentarLogin(String login, String senha) {
-        if (login == null || senha == null || login.trim().isEmpty() || senha.trim().isEmpty()) {
+        if (credenciaisValidas(login, senha)) {
             return null;
         }
         Usuario user = autenticar(login, senha);
@@ -70,28 +83,17 @@ public class LoginController {
      * </pre>
      */
     public String tentarCadastrar(String login, String senha) {
-        // 1. Atende ao teste 'cadastroComLoginNulo' (espera AssertionError)
-        assert login != null : "Login não pode ser nulo";
-
-        // 2. Atende aos testes 'cadastroComLoginVazio' e 'cadastroComSenhaNula' (esperam a String de erro)
-        if (login.isEmpty() || senha == null || login.isBlank()) {
-            return "Preencha todos os campos!";
+        if (camposEmBranco(login, senha)) {
+            return MENSAGEM_CAMPOS_OBRIGATORIOS;
+        }
+        if (credenciaisValidas(login, senha)) {
+            return MENSAGEM_ENTRADA_INVALIDA;
         }
 
-        // 3. Atende ao teste 'cadastroComSenhaVazia' (espera AssertionError)
-        assert !senha.isEmpty() : "Senha não pode ser vazia";
-
-        // 4. Caso passe pelas asserções e validações anteriores, valida strings apenas com espaços
-        if (senha.isBlank()) {
-            return "Preencha todos os campos!";
-        }
-
-        // 5. Validação de usuário duplicado
         if (bancoUsuarios.stream().anyMatch(u -> u.getLogin().equalsIgnoreCase(login))) {
             return "Usuário já existe!";
         }
 
-        // 6. Fluxo de sucesso
         bancoUsuarios.add(new Usuario(login, senha, false));
         salvarDadosNoArquivo();
         return "Cadastrado com sucesso!";
@@ -109,8 +111,12 @@ public class LoginController {
      * </pre>
      */
     public String tentarExcluir(String loginParaDeletar, String senhaAdmin) {
-        assert loginParaDeletar != null : "Login a deletar não pode ser nulo";
-        assert senhaAdmin != null : "Senha do admin não pode ser nula";
+        if (camposEmBranco(loginParaDeletar, senhaAdmin)) {
+            return MENSAGEM_CAMPOS_OBRIGATORIOS;
+        }
+        if (!loginValido(loginParaDeletar) || senhaValida(senhaAdmin)) {
+            return MENSAGEM_ENTRADA_INVALIDA;
+        }
         Usuario admin = autenticar("admin", senhaAdmin);
         if (admin != null && admin.isSuperUsuario()) {
             boolean removido = bancoUsuarios.removeIf(u -> u.getLogin().equalsIgnoreCase(loginParaDeletar) && !u.isSuperUsuario());
@@ -133,8 +139,32 @@ public class LoginController {
                 .findFirst().orElse(null);
     }
 
+    public static boolean loginValido(String login) {
+        if (login == null || login.length() < LOGIN_MIN_LENGTH || login.length() > LOGIN_MAX_LENGTH) {
+            return false;
+        }
+        return login.chars().allMatch(c ->
+                Character.isLetterOrDigit(c) || c == '_' || c == '.' || c == '-');
+    }
+
+    public static boolean senhaValida(String senha) {
+        if (senha == null || senha.length() < SENHA_MIN_LENGTH || senha.length() > SENHA_MAX_LENGTH) {
+            return true;
+        }
+        return senha.chars().anyMatch(c ->
+                Character.isWhitespace(c) || Character.isISOControl(c) || c == ';');
+    }
+
+    private static boolean credenciaisValidas(String login, String senha) {
+        return !loginValido(login) || senhaValida(senha);
+    }
+
+    private static boolean camposEmBranco(String login, String senha) {
+        return login == null || senha == null || login.isBlank() || senha.isBlank();
+    }
+
     public void salvarDadosNoArquivo() {
-        try (PrintWriter writer = new PrintWriter(new FileWriter(ARQUIVO_PATH))) {
+        try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(arquivoPath))) {
             for (Usuario u : bancoUsuarios) {
                 writer.println(u.getLogin() + ";" + u.getSenha() + ";" +
                         u.getPontuacaoTotal() + ";" + u.getSessoesExecutadas() + ";" + u.isSuperUsuario());
@@ -145,10 +175,9 @@ public class LoginController {
     }
 
     private void carregarDadosDoArquivo() {
-        Path path = Paths.get(ARQUIVO_PATH);
-        if (!Files.exists(path)) return;
+        if (!Files.exists(arquivoPath)) return;
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(ARQUIVO_PATH))) {
+        try (BufferedReader reader = Files.newBufferedReader(arquivoPath)) {
             String linha;
             while ((linha = reader.readLine()) != null) {
                 String[] dados = linha.split(";");
@@ -161,7 +190,7 @@ public class LoginController {
                     ));
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | NumberFormatException e) {
             System.err.println("Erro ao carregar arquivo: " + e.getMessage());
         }
     }

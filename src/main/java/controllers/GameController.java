@@ -5,6 +5,8 @@ import models.Ponto;
 import models.SessaoJogo;
 import models.Usuario;
 
+import java.util.function.IntFunction;
+
 /**
  * Controlador principal do jogo, responsável por coordenar as ações do jogador,
  * aplicar regras de movimento e notificar a interface gráfica.
@@ -20,14 +22,16 @@ public class GameController {
     }
 
     private final Usuario usuario;
-    private SessaoJogo sessao;
+    private final SessaoJogo sessao;
     private Mapa mapa;
     private GameListener listener;
-    private Runnable onVoltarMenu;
+    private final Runnable onVoltarMenu;
+    private final IntFunction<Mapa> criarMapa;
+    private final Runnable persistirUsuario;
 
     public int xAtual = 0;
     public int yAtual = 0;
-    public boolean modoTeste = false;
+    public boolean modoTeste;
 
     /**
      * Construtor usado pela aplicação real (modo normal).
@@ -43,6 +47,8 @@ public class GameController {
         this.usuario = usuario;
         this.onVoltarMenu = onVoltarMenu;
         this.sessao = new SessaoJogo();
+        this.criarMapa = this::criarMapaAleatorio;
+        this.persistirUsuario = this::persistirNaInstanciaAtual;
         this.modoTeste = false;
     }
 
@@ -63,7 +69,27 @@ public class GameController {
         this.sessao = sessao;
         this.mapa = mapa;
         this.onVoltarMenu = onVoltarMenu;
+        this.criarMapa = this::criarMapaAleatorio;
+        this.persistirUsuario = this::persistirNaInstanciaAtual;
         this.modoTeste = true;
+    }
+
+    /**
+     * Construtor para executar o fluxo completo com dependências determinísticas.
+     */
+    public GameController(Usuario usuario, SessaoJogo sessao, Runnable onVoltarMenu,
+                          IntFunction<Mapa> criarMapa, Runnable persistirUsuario) {
+        assert usuario != null : "Usuario não pode ser nulo";
+        assert sessao != null : "SessaoJogo não pode ser nula";
+        assert onVoltarMenu != null : "Runnable de voltar ao menu não pode ser nulo";
+        assert criarMapa != null : "Fábrica de mapas não pode ser nula";
+        assert persistirUsuario != null : "Persistência não pode ser nula";
+        this.usuario = usuario;
+        this.sessao = sessao;
+        this.onVoltarMenu = onVoltarMenu;
+        this.criarMapa = criarMapa;
+        this.persistirUsuario = persistirUsuario;
+        this.modoTeste = false;
     }
 
     public void setListener(GameListener listener) {
@@ -90,8 +116,7 @@ public class GameController {
         if (!modoTeste) {
             this.mapa = sessao.getMapaDoNivelAtual();
             if (this.mapa == null) {
-                this.mapa = new Mapa(15, 15);
-                this.mapa.gerarCenarioAleatorio(3 + sessao.getNivelAtual());
+                this.mapa = criarMapa.apply(sessao.getNivelAtual());
                 sessao.salvarMapa(this.mapa);
             } else {
                 getMapa().getTrajeto().clear();
@@ -143,10 +168,7 @@ public class GameController {
                 getMapa().coletarMoeda(futuraPosicao);
                 getUsuario().adicionarPontos(10);
 
-                // NOVO: Persiste os pontos ganhos imediatamente no arquivo físico
-                if (LoginController.getInstance() != null) {
-                    LoginController.getInstance().salvarDadosNoArquivo();
-                }
+                persistirUsuario.run();
             }
 
             xAtual = novoX;
@@ -173,6 +195,18 @@ public class GameController {
         if (listener != null) {
             listener.render();
             listener.atualizarHUD();
+        }
+    }
+
+    private Mapa criarMapaAleatorio(int nivel) {
+        Mapa novoMapa = new Mapa(15, 15);
+        novoMapa.gerarCenarioAleatorio(3 + nivel);
+        return novoMapa;
+    }
+
+    private void persistirNaInstanciaAtual() {
+        if (LoginController.getInstance() != null) {
+            LoginController.getInstance().salvarDadosNoArquivo();
         }
     }
 }

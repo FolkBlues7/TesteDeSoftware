@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.nio.file.Files;
+import java.util.function.IntFunction;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -108,7 +110,7 @@ public class GameControllerTest {
         when(mapaMock.getTrajeto()).thenReturn(new ArrayList<>(List.of(new Ponto(0, 0))));
 
         // não setamos listener – deve executar sem erro
-        assertDoesNotThrow(() -> ctrl.carregarNivel());
+        assertDoesNotThrow(ctrl::carregarNivel);
     }
 
     @Test
@@ -226,6 +228,75 @@ public class GameControllerTest {
 
         verify(listener).render();
         verify(listener).atualizarHUD();
+    }
+
+    @Test
+    // Teste estrutural: valida contratos dos controladores de jogo.
+    void contratosDosConstrutores() {
+        Usuario usuario = new Usuario("u", "p", false);
+        SessaoJogo sessao = new SessaoJogo();
+        IntFunction<Mapa> fabrica = nivel -> new Mapa(3, 3);
+
+        assertThrows(AssertionError.class, () -> new GameController(null, () -> {}));
+        assertThrows(AssertionError.class, () -> new GameController(usuario, null));
+        assertThrows(AssertionError.class, () -> new GameController(null, sessao, mapaMock, () -> {}));
+        assertThrows(AssertionError.class, () -> new GameController(usuario, null, mapaMock, () -> {}));
+        assertThrows(AssertionError.class, () -> new GameController(usuario, sessao, mapaMock, null));
+        assertThrows(AssertionError.class,
+                () -> new GameController(null, sessao, () -> {}, fabrica, () -> {}));
+        assertThrows(AssertionError.class,
+                () -> new GameController(usuario, null, () -> {}, fabrica, () -> {}));
+        assertThrows(AssertionError.class,
+                () -> new GameController(usuario, sessao, null, fabrica, () -> {}));
+        assertThrows(AssertionError.class,
+                () -> new GameController(usuario, sessao, () -> {}, null, () -> {}));
+        assertThrows(AssertionError.class,
+                () -> new GameController(usuario, sessao, () -> {}, fabrica, null));
+    }
+
+    @Test
+    // Teste estrutural: valida contratos de carregamento e movimento.
+    void contratosDeOperacao() {
+        GameController semMapa = new GameController(usuarioMock, sessaoMock, null, voltarMock);
+        assertDoesNotThrow(semMapa::carregarNivel);
+        assertThrows(AssertionError.class, () -> semMapa.aplicarRegrasDeMovimento(0, 0));
+
+        when(mapaMock.podeMover(0, 0)).thenReturn(false);
+        assertThrows(AssertionError.class, controller::carregarNivel);
+    }
+
+    @Test
+    // Teste estrutural: valida persistência sem instância de login.
+    void coletaMoedaSemLoginInicializado() throws Exception {
+        var instance = LoginController.class.getDeclaredField("instance");
+        instance.setAccessible(true);
+        Object anterior = instance.get(null);
+        instance.set(null, null);
+        try {
+            Ponto destino = new Ponto(1, 0);
+            when(mapaMock.podeMover(1, 0)).thenReturn(true);
+            when(mapaMock.isAlcapao(1, 0)).thenReturn(false);
+            when(mapaMock.getMoedas()).thenReturn(List.of(destino));
+            when(mapaMock.isItemEspecial(1, 0)).thenReturn(false);
+
+            controller.aplicarRegrasDeMovimento(1, 0);
+            verify(usuarioMock).adicionarPontos(10);
+        } finally {
+            instance.set(null, anterior);
+        }
+
+        var arquivo = Files.createTempFile("game-controller-login-", ".txt");
+        try {
+            new LoginController(arquivo);
+            Usuario outroUsuario = spy(new Usuario("outro", "123", false));
+            GameController outroController = new GameController(
+                    outroUsuario, sessaoMock, mapaMock, voltarMock);
+            outroController.aplicarRegrasDeMovimento(1, 0);
+            verify(outroUsuario).adicionarPontos(10);
+        } finally {
+            Files.deleteIfExists(arquivo);
+            instance.set(null, anterior);
+        }
     }
 
     @Property

@@ -83,11 +83,24 @@ public class UsuarioTest {
         assertTrue(usuarioNovo.getPontuacaoTotal() < 0); // overflow gera negativo
     }
 
+    @Test
+    // Teste estrutural: valida contratos do usuário.
+    void contratosDosConstrutoresEInvariante() {
+        assertThrows(AssertionError.class, () -> new Usuario(null, "senha", false));
+        assertThrows(AssertionError.class, () -> new Usuario("login", null, false));
+        assertThrows(AssertionError.class, () -> new Usuario(null, "senha", 0, 0, false));
+        assertThrows(AssertionError.class, () -> new Usuario("login", null, 0, 0, false));
+        assertThrows(AssertionError.class, () -> new Usuario("login", "senha", 0, -1, false));
+
+        Usuario limite = new Usuario("login", "senha", 0, Integer.MAX_VALUE, false);
+        assertThrows(AssertionError.class, limite::incrementarSessoes);
+    }
+
     @Property
     // Teste de propriedade
     void propriedade_PontuacaoESessoesNuncaNegativasAposOperacoes(
             @ForAll @IntRange(min = -100, max = 1000) int deltaPontos,
-            @ForAll @IntRange(min = 0, max = 100) int incrementos) {
+            @ForAll @IntRange(max = 100) int incrementos) {
         Usuario u = new Usuario("test", "pass", false);
         u.adicionarPontos(deltaPontos);
         for (int i = 0; i < incrementos; i++) {
