@@ -39,9 +39,7 @@ class MapaTest {
         mapa.gerarCenarioPredefinido(new boolean[5][5], new ArrayList<>());
 
         mapa.setRandom(null);
-        assertThrows(NullPointerException.class, () -> {
-            mapa.gerarCenarioAleatorio(1);
-        });
+        assertThrows(NullPointerException.class, () -> mapa.gerarCenarioAleatorio(1));
 
         assertFalse(mapa.podeMover(Integer.MAX_VALUE, 0));
         assertFalse(mapa.podeMover(0, Integer.MAX_VALUE));

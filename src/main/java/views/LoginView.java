@@ -82,9 +82,7 @@ public class LoginView extends VBox {
 
         botaoRanking.setOnAction(e -> {
             Scene scene = getScene();
-            scene.setRoot(new RankingView(controller.getBancoUsuarios(), () -> {
-                scene.setRoot(this);
-            }));
+            scene.setRoot(new RankingView(controller.getBancoUsuarios(), () -> scene.setRoot(this)));
         });
     }
 

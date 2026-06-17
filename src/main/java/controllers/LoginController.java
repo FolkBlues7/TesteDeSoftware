@@ -114,7 +114,7 @@ public class LoginController {
         if (camposEmBranco(loginParaDeletar, senhaAdmin)) {
             return MENSAGEM_CAMPOS_OBRIGATORIOS;
         }
-        if (!loginValido(loginParaDeletar) || senhaValida(senhaAdmin)) {
+        if (loginValido(loginParaDeletar) || senhaValida(senhaAdmin)) {
             return MENSAGEM_ENTRADA_INVALIDA;
         }
         Usuario admin = autenticar("admin", senhaAdmin);
@@ -141,9 +141,9 @@ public class LoginController {
 
     public static boolean loginValido(String login) {
         if (login == null || login.length() < LOGIN_MIN_LENGTH || login.length() > LOGIN_MAX_LENGTH) {
-            return false;
+            return true;
         }
-        return login.chars().allMatch(c ->
+        return !login.chars().allMatch(c ->
                 Character.isLetterOrDigit(c) || c == '_' || c == '.' || c == '-');
     }
 
@@ -156,7 +156,7 @@ public class LoginController {
     }
 
     private static boolean credenciaisValidas(String login, String senha) {
-        return !loginValido(login) || senhaValida(senha);
+        return loginValido(login) || senhaValida(senha);
     }
 
     private static boolean camposEmBranco(String login, String senha) {
