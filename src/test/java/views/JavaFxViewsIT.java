@@ -27,6 +27,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(ApplicationExtension.class)
 class JavaFxViewsIT {
 
+    private static final String CAMPO_LOGIN = "#campo-login";
+    private static final String CAMPO_SENHA = "#campo-senha";
+    private static final String GAME_CANVAS = "#game-canvas";
+
     private Stage stage;
 
     @Start
@@ -37,40 +41,67 @@ class JavaFxViewsIT {
 
     @Test
     void loginViewFiltraEntradasInvalidas(FxRobot robot) {
-        LoginView view = new LoginView(new LoginController(tempFile()), usuario -> {});
-        robot.interact(() -> stage.setScene(new Scene(view, 600, 600)));
+        loginView(robot);
 
-        replaceText(robot, "#campo-login", "abc_DEF.12-");
-        assertThat(robot.lookup("#campo-login").queryTextInputControl().getText()).isEqualTo("abc_DEF.12-");
+        replaceText(robot, CAMPO_LOGIN, "abc_DEF.12-");
+        assertInputText(robot, CAMPO_LOGIN, "abc_DEF.12-");
 
-        appendText(robot, "#campo-login", "; espaco");
-        assertThat(robot.lookup("#campo-login").queryTextInputControl().getText()).isEqualTo("abc_DEF.12-");
-        appendText(robot, "#campo-login", "espaco");
-        assertThat(robot.lookup("#campo-login").queryTextInputControl().getText()).isEqualTo("abc_DEF.12-espaco");
+        appendText(robot, CAMPO_LOGIN, "; espaco");
+        assertInputText(robot, CAMPO_LOGIN, "abc_DEF.12-");
+        appendText(robot, CAMPO_LOGIN, "espaco");
+        assertInputText(robot, CAMPO_LOGIN, "abc_DEF.12-espaco");
 
-        replaceText(robot, "#campo-login", "a".repeat(LoginController.LOGIN_MAX_LENGTH + 5));
-        assertThat(robot.lookup("#campo-login").queryTextInputControl().getText()).isEqualTo("abc_DEF.12-espaco");
+        replaceText(robot, CAMPO_LOGIN, "a".repeat(LoginController.LOGIN_MAX_LENGTH + 5));
+        assertInputText(robot, CAMPO_LOGIN, "abc_DEF.12-espaco");
 
-        replaceText(robot, "#campo-senha", "senhaValida123");
-        appendText(robot, "#campo-senha", " ");
-        appendText(robot, "#campo-senha", "\u0001");
-        appendText(robot, "#campo-senha", ";");
-        assertThat(robot.lookup("#campo-senha").queryTextInputControl().getText()).isEqualTo("senhaValida123");
+        replaceText(robot, CAMPO_SENHA, "senhaValida123");
+        appendText(robot, CAMPO_SENHA, " ");
+        appendText(robot, CAMPO_SENHA, "\u0001");
+        appendText(robot, CAMPO_SENHA, ";");
+        assertInputText(robot, CAMPO_SENHA, "senhaValida123");
 
-        replaceText(robot, "#campo-senha", "b".repeat(LoginController.SENHA_MAX_LENGTH + 5));
-        assertThat(robot.lookup("#campo-senha").queryTextInputControl().getText()).isEqualTo("senhaValida123");
+        replaceText(robot, CAMPO_SENHA, "b".repeat(LoginController.SENHA_MAX_LENGTH + 5));
+        assertInputText(robot, CAMPO_SENHA, "senhaValida123");
     }
 
     @Test
     void gameViewTrataTodasAsTeclas(FxRobot robot) {
         AtomicBoolean voltouAoMenu = new AtomicBoolean(false);
-        Mapa mapa = new Mapa(5, 5);
-        mapa.gerarCenarioPredefinido(new boolean[5][5], new ArrayList<>());
+        GameView view = gameViewComMapa(robot, mapaVazio(5), () -> voltouAoMenu.set(true));
+
+        pressAll(view, KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT, KeyCode.A, KeyCode.R, KeyCode.ESCAPE);
+
+        assertThat(voltouAoMenu).isTrue();
+    }
+
+    @Test
+    void canvasViewRenderizaComESemElementosOpcionais(FxRobot robot) {
+        Mapa mapaCompleto = mapaCompletoParaCanvas();
+        CanvasView canvasView = new CanvasView(mapaCompleto);
+        robot.interact(() -> {
+            stage.setScene(new Scene(canvasView));
+            canvasView.render(mapaCompleto);
+        });
+
+        Mapa mapaVazio = mapaVazio(2);
+        mapaVazio.getTrajeto().clear();
+        robot.interact(() -> canvasView.render(mapaVazio));
+
+        assertThat(canvasView.lookup(GAME_CANVAS)).isNotNull();
+    }
+
+    private LoginView loginView(FxRobot robot) {
+        LoginView view = new LoginView(new LoginController(tempFile()), usuario -> {});
+        robot.interact(() -> stage.setScene(new Scene(view, 600, 600)));
+        return view;
+    }
+
+    private GameView gameViewComMapa(FxRobot robot, Mapa mapa, Runnable onVoltarMenu) {
         GameController controller = new GameController(
                 new Usuario("jogador", "123", false),
                 new SessaoJogo(),
                 mapa,
-                () -> voltouAoMenu.set(true)
+                onVoltarMenu
         );
         controller.xAtual = 1;
         controller.yAtual = 1;
@@ -81,40 +112,30 @@ class JavaFxViewsIT {
             stage.show();
             view.requestFocus();
         });
-
-        press(view, KeyCode.UP);
-        press(view, KeyCode.DOWN);
-        press(view, KeyCode.LEFT);
-        press(view, KeyCode.RIGHT);
-        press(view, KeyCode.A);
-        press(view, KeyCode.R);
-        press(view, KeyCode.ESCAPE);
-
-        assertThat(voltouAoMenu).isTrue();
+        return view;
     }
 
-    @Test
-    void canvasViewRenderizaComESemElementosOpcionais(FxRobot robot) {
-        Mapa mapaCompleto = new Mapa(4, 4);
+    private static Mapa mapaVazio(int tamanho) {
+        Mapa mapa = new Mapa(tamanho, tamanho);
+        mapa.gerarCenarioPredefinido(new boolean[tamanho][tamanho], new ArrayList<>());
+        return mapa;
+    }
+
+    private static Mapa mapaCompletoParaCanvas() {
+        Mapa mapa = new Mapa(4, 4);
         boolean[][] obstaculos = new boolean[4][4];
         obstaculos[0][1] = true;
-        mapaCompleto.gerarCenarioPredefinido(obstaculos, List.of(new Ponto(1, 0)));
-        mapaCompleto.setItemEspecial(new Ponto(2, 0));
-        mapaCompleto.setAlcapao(new Ponto(3, 0));
-        mapaCompleto.adicionarMovimento(1, 0);
+        mapa.gerarCenarioPredefinido(obstaculos, List.of(new Ponto(1, 0)));
+        mapa.setItemEspecial(new Ponto(2, 0));
+        mapa.setAlcapao(new Ponto(3, 0));
+        mapa.adicionarMovimento(1, 0);
+        return mapa;
+    }
 
-        CanvasView canvasView = new CanvasView(mapaCompleto);
-        robot.interact(() -> {
-            stage.setScene(new Scene(canvasView));
-            canvasView.render(mapaCompleto);
-        });
-
-        Mapa mapaVazio = new Mapa(2, 2);
-        mapaVazio.gerarCenarioPredefinido(new boolean[2][2], new ArrayList<>());
-        mapaVazio.getTrajeto().clear();
-        robot.interact(() -> canvasView.render(mapaVazio));
-
-        assertThat(canvasView.lookup("#game-canvas")).isNotNull();
+    private static void pressAll(GameView view, KeyCode... keyCodes) {
+        for (KeyCode keyCode : keyCodes) {
+            press(view, keyCode);
+        }
     }
 
     private static void press(GameView view, KeyCode keyCode) {
@@ -143,6 +164,14 @@ class JavaFxViewsIT {
             TextInputControl input = robot.lookup(seletor).queryAs(TextInputControl.class);
             input.appendText(texto);
         });
+    }
+
+    private static void assertInputText(FxRobot robot, String seletor, String esperado) {
+        assertThat(inputText(robot, seletor)).isEqualTo(esperado);
+    }
+
+    private static String inputText(FxRobot robot, String seletor) {
+        return robot.lookup(seletor).queryTextInputControl().getText();
     }
 
     private static java.nio.file.Path tempFile() {

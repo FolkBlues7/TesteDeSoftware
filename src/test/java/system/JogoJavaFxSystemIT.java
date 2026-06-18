@@ -21,7 +21,10 @@ import org.testfx.util.WaitForAsyncUtils;
 import run.MainApp;
 
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -50,28 +53,28 @@ class JogoJavaFxSystemIT {
         assertThat(login.mensagem()).isEqualTo("Cadastrado com sucesso!");
 
         GamePage jogo = login.preencher("mario", "senha123").entrarComSucesso();
-        assertThat(jogo.usuario()).contains("mario");
-        assertThat(jogo.nivel()).contains("1");
-        assertThat(jogo.pontos()).contains("0");
+        assertThat(jogo.usuarioLogado()).isEqualTo("mario");
+        assertThat(jogo.nivelAtual()).isEqualTo(1);
+        assertThat(jogo.pontuacao()).isEqualTo(0);
 
         jogo.teclar(KeyCode.RIGHT);
-        assertThat(jogo.pontos()).contains("10");
+        assertThat(jogo.pontuacao()).isEqualTo(10);
 
         jogo.teclar(KeyCode.LEFT);
         jogo.teclar(KeyCode.LEFT);
-        assertThat(jogo.pontos()).contains("10");
+        assertThat(jogo.pontuacao()).isEqualTo(10);
 
         jogo.teclar(KeyCode.RIGHT);
         jogo.teclar(KeyCode.RIGHT);
         jogo.teclar(KeyCode.RIGHT);
-        assertThat(jogo.nivel()).contains("2");
-        assertThat(jogo.pontos()).contains("10");
+        assertThat(jogo.nivelAtual()).isEqualTo(2);
+        assertThat(jogo.pontuacao()).isEqualTo(10);
 
         jogo.teclar(KeyCode.RIGHT);
-        assertThat(jogo.nivel()).contains("1");
+        assertThat(jogo.nivelAtual()).isEqualTo(1);
 
         jogo.teclar(KeyCode.R);
-        assertThat(jogo.nivel()).contains("1");
+        assertThat(jogo.nivelAtual()).isEqualTo(1);
 
         jogo.teclar(KeyCode.ESCAPE);
         login.aguardar();
@@ -81,7 +84,10 @@ class JogoJavaFxSystemIT {
         login.aguardar();
 
         RankingPage ranking = login.abrirRanking();
-        assertThat(ranking.conteudo()).contains("mario").contains("10");
+        RankingEntry mario = ranking.entry("mario");
+        assertThat(mario.login()).isEqualTo("mario");
+        assertThat(mario.pontos()).isEqualTo(10);
+        assertThat(mario.sessoes()).isEqualTo(2);
         ranking.voltar();
         login.aguardar();
 
@@ -161,6 +167,7 @@ class JogoJavaFxSystemIT {
     }
 
     private static final class GamePage {
+        private static final Pattern NUMERO = Pattern.compile("-?\\d+");
         private final FxRobot robot;
 
         private GamePage(FxRobot robot) {
@@ -190,20 +197,28 @@ class JogoJavaFxSystemIT {
             WaitForAsyncUtils.waitForFxEvents();
         }
 
-        private String usuario() {
-            return texto("#hud-usuario");
+        private String usuarioLogado() {
+            return texto("#hud-usuario").replace("👤", "").trim();
         }
 
-        private String nivel() {
-            return texto("#hud-nivel");
+        private int nivelAtual() {
+            return primeiroInteiro(texto("#hud-nivel"));
         }
 
-        private String pontos() {
-            return texto("#hud-pontos");
+        private int pontuacao() {
+            return primeiroInteiro(texto("#hud-pontos"));
         }
 
         private String texto(String seletor) {
             return ((Label) robot.lookup(seletor).query()).getText();
+        }
+
+        private int primeiroInteiro(String texto) {
+            Matcher matcher = NUMERO.matcher(texto);
+            if (!matcher.find()) {
+                throw new AssertionError("Texto sem numero inteiro: " + texto);
+            }
+            return Integer.parseInt(matcher.group());
         }
 
         private void focarJogo() {
@@ -221,13 +236,37 @@ class JogoJavaFxSystemIT {
             robot.lookup("#ranking-view").query();
         }
 
+        private RankingEntry entry(String login) {
+            return Arrays.stream(conteudo().split("\\R"))
+                    .map(String::trim)
+                    .filter(linha -> linha.startsWith(login + " "))
+                    .map(this::parseEntry)
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("Ranking sem linha para login: " + login));
+        }
+
         private String conteudo() {
             return ((TextArea) robot.lookup("#ranking-lista").query()).getText();
+        }
+
+        private RankingEntry parseEntry(String linha) {
+            String[] colunas = linha.split("\\s*\\|\\s*");
+            if (colunas.length != 3) {
+                throw new AssertionError("Linha de ranking invalida: " + linha);
+            }
+            return new RankingEntry(
+                    colunas[0].trim(),
+                    Integer.parseInt(colunas[1].trim()),
+                    Integer.parseInt(colunas[2].trim())
+            );
         }
 
         private void voltar() {
             robot.interact(() -> robot.lookup("#botao-voltar-ranking").queryAs(Button.class).fire());
             WaitForAsyncUtils.waitForFxEvents();
         }
+    }
+
+    private record RankingEntry(String login, int pontos, int sessoes) {
     }
 }
