@@ -19,6 +19,7 @@ public class GameView extends BorderPane implements GameController.GameListener 
 		this.stage = stage;
 		this.hudView = new HUDView();
 
+		setId("game-view");
 		setCenter(new Pane());   // placeholder até o primeiro render
 		setTop(hudView);
 		hudView.getBtnSair().setOnAction(e -> controller.getOnVoltarMenu().run());

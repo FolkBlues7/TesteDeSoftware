@@ -11,12 +11,13 @@ import models.SessaoJogo;
 import models.Usuario;
 
 public class HUDView extends HBox {
-    private Label lblUsuario;
-    private Label lblPontos;
-    private Label lblNivel;
-    private Button btnSair;
+    private final Label lblUsuario;
+    private final Label lblPontos;
+    private final Label lblNivel;
+    private final Button btnSair;
 
     public HUDView() {
+        setId("hud-view");
         this.setPadding(new Insets(10));
         this.setSpacing(20);
         this.setAlignment(Pos.CENTER_LEFT);
@@ -24,12 +25,15 @@ public class HUDView extends HBox {
         this.setStyle("-fx-background-color: #34495e; -fx-border-color: #2c3e50; -fx-border-width: 0 0 2 0;");
 
         lblUsuario = new Label();
+        lblUsuario.setId("hud-usuario");
         lblUsuario.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
 
         lblNivel = new Label();
+        lblNivel.setId("hud-nivel");
         lblNivel.setStyle("-fx-text-fill: #f1c40f; -fx-font-weight: bold;");
 
         lblPontos = new Label();
+        lblPontos.setId("hud-pontos");
         lblPontos.setStyle("-fx-text-fill: #2ecc71; -fx-font-weight: bold;");
 
         // Isso cria um espaço flexível que empurra o botão para o canto direito
@@ -37,6 +41,7 @@ public class HUDView extends HBox {
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         btnSair = new Button("Sair pro Menu");
+        btnSair.setId("botao-sair-menu");
         btnSair.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold;");
         btnSair.setCursor(javafx.scene.Cursor.HAND);
 

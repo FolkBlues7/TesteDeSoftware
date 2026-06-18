@@ -12,7 +12,9 @@ public class CanvasView extends StackPane {
     private static final int TAMANHO_CELULA = 40;
 
     public CanvasView(Mapa mapa) {
+        setId("canvas-view");
         this.canvas = new Canvas(mapa.getColunas() * TAMANHO_CELULA, mapa.getLinhas() * TAMANHO_CELULA);
+        this.canvas.setId("game-canvas");
         getChildren().add(canvas);
     }
 

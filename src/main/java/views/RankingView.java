@@ -10,6 +10,7 @@ import java.util.List;
 
 public class RankingView extends VBox {
     public RankingView(List<Usuario> usuarios, Runnable voltarAoMenu) {
+        setId("ranking-view");
         this.setPadding(new Insets(20));
         this.setSpacing(15);
         this.setAlignment(Pos.CENTER);
@@ -21,6 +22,7 @@ public class RankingView extends VBox {
 
         // Criando uma tabela simples
         TextArea listaRanking = new TextArea();
+        listaRanking.setId("ranking-lista");
         listaRanking.setEditable(false);
         listaRanking.setPrefHeight(300);
         listaRanking.setMaxWidth(450); // Ajustando a largura
@@ -40,6 +42,7 @@ public class RankingView extends VBox {
         listaRanking.setStyle("-fx-font-family: 'Courier New'; -fx-font-size: 14;");
 
         Button btnVoltar = new Button("Voltar");
+        btnVoltar.setId("botao-voltar-ranking");
         btnVoltar.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold;");
         btnVoltar.setOnAction(e -> voltarAoMenu.run());
 

@@ -32,19 +32,25 @@ public class LoginView extends VBox {
         titulo.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
 
         campoNome = new TextField();
+        campoNome.setId("campo-login");
         campoNome.setPromptText("Login...");
         campoNome.setMaxWidth(250);
         campoNome.setTextFormatter(new TextFormatter<>(filtroLogin()));
 
         campoSenha = new PasswordField();
+        campoSenha.setId("campo-senha");
         campoSenha.setPromptText("Senha...");
         campoSenha.setMaxWidth(250);
         campoSenha.setTextFormatter(new TextFormatter<>(filtroSenha()));
 
         botaoEntrar = new Button("Entrar");
+        botaoEntrar.setId("botao-entrar");
         botaoCadastrar = new Button("Cadastrar");
+        botaoCadastrar.setId("botao-cadastrar");
         botaoExcluir = new Button("Excluir Usuário");
+        botaoExcluir.setId("botao-excluir");
         botaoRanking = new Button("🏆 Ranking");
+        botaoRanking.setId("botao-ranking");
 
         HBox caixaAcao = new HBox(10, botaoEntrar, botaoCadastrar);
         caixaAcao.setAlignment(Pos.CENTER);
@@ -53,6 +59,7 @@ public class LoginView extends VBox {
         caixaExtra.setAlignment(Pos.CENTER);
 
         mensagemAviso = new Label();
+        mensagemAviso.setId("mensagem-aviso");
         mensagemAviso.setStyle("-fx-text-fill: #f1c40f;");
 
         this.getChildren().addAll(titulo, campoNome, campoSenha, caixaAcao, caixaExtra, mensagemAviso);
